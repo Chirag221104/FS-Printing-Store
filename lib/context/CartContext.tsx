@@ -12,7 +12,9 @@ export interface CartItem {
   sku: string;
   name: string;
   price: number;
+  originalPrice?: number;
   image: string;
+  category?: string;
   quantity: number;
   customization?: any;
 }
@@ -84,11 +86,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Sync to Firestore helper
   const syncToCloud = async (newItems: CartItem[]) => {
     if (!sessionId) return;
-    const cartRef = doc(db, 'carts', sessionId);
-    await setDoc(cartRef, {
-      items: newItems,
-      updatedAt: new Date().toISOString()
-    }, { merge: true });
+    try {
+      // JSON serialization strips out any 'undefined' properties which Firestore rejects
+      const sanitizedItems = JSON.parse(JSON.stringify(newItems));
+      const cartRef = doc(db, 'carts', sessionId);
+      await setDoc(cartRef, {
+        items: sanitizedItems,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error syncing cart to Firestore:', err);
+    }
   };
 
   const addToCart = useCallback(async (item: Partial<CartItem> & { name: string; price: number }) => {
@@ -97,11 +105,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       productId: item.productId || item.id || item.name,
       variantId: item.variantId || item.id || 'default',
       sku: item.sku || '',
-      name: item.name,
-      price: item.price,
+      name: item.name || 'Product',
+      price: item.price || 0,
+      originalPrice: item.originalPrice,
       image: item.image || '',
+      category: item.category || 'General',
       quantity: item.quantity || 1,
-      customization: item.customization,
+      ...(item.customization ? { customization: item.customization } : {}),
     };
 
     setItems(prev => {

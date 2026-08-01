@@ -64,17 +64,14 @@ export default function CartDrawer() {
               <div key={item.id} className={styles.cartItem}>
                 <div className={styles.itemImage}>
                   <div className={styles.imagePlaceholder}>
-                    {item.category.charAt(0)}
+                    {(item.category || item.name || 'P').charAt(0)}
                   </div>
                 </div>
                 <div className={styles.itemDetails}>
                   <h4 className={styles.itemName}>{item.name}</h4>
-                  <p className={styles.itemCategory}>{item.category}</p>
+                  {item.category && <p className={styles.itemCategory}>{item.category}</p>}
                   <div className={styles.itemPricing}>
                     <span className={styles.itemPrice}>₹{item.price}</span>
-                    {item.originalPrice && (
-                      <span className={styles.itemOriginalPrice}>₹{item.originalPrice}</span>
-                    )}
                   </div>
                 </div>
                 <div className={styles.itemActions}>
