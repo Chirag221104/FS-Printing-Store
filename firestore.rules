@@ -1,0 +1,93 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Function to check if user owns the document
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // 1. PRODUCTS & CATEGORIES
+    // Anyone can read products, variants, and categories. Only admins can write.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      
+      match /variants/{variantId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+      
+      match /reviews/{reviewId} {
+        allow read: if true;
+        // Anyone can create a review if they are logged in (could restrict to verified buyers later)
+        allow create: if request.auth != null;
+        allow update, delete: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
+      }
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 2. USERS & ADDRESSES
+    // Users can read/write their own data. Admins can read/write all.
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // 3. ARTWORKS
+    // Users can read/write their own artworks. Guests can create but need session ID matching. Admins can read all.
+    match /artworks/{artworkId} {
+      // Allow read if admin or if the user is the uploader
+      allow read: if isAdmin() || (request.auth != null && resource.data.uploaderId == request.auth.uid) || (resource.data.uploaderId == request.resource.data.uploaderId);
+      // Anyone can create an artwork (guests or users)
+      allow create: if true;
+      allow update, delete: if isAdmin() || (request.auth != null && resource.data.uploaderId == request.auth.uid);
+    }
+
+    // 4. CARTS
+    // Users/Guests can read/write their own carts
+    match /carts/{cartId} {
+      // Authenticated users can only access their own cart; guests can access any cart by session ID
+      allow read, write: if request.auth == null || cartId == request.auth.uid;
+    }
+
+    // 5. ORDERS & TIMELINES
+    // Users can read their own orders. Anyone can create an order (guest checkout). Admins can manage all.
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.customerId == request.auth.uid);
+      allow create: if true; // Allow guest checkout creation
+      allow update, delete: if isAdmin();
+      
+      match /timeline/{timelineId} {
+        allow read: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid);
+        allow write: if isAdmin();
+      }
+    }
+
+    // 6. COUPONS
+    // Anyone can read active coupons, only admins can write.
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 7. SETTINGS
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

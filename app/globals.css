@@ -1,0 +1,474 @@
+/* ============================================
+   F.S PRINT WORKS — Design System
+   Light & Playful E-Commerce Theme
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+/* ============================================
+   CSS Custom Properties (Design Tokens)
+   ============================================ */
+:root {
+  /* Brand Colors — Light & Playful */
+  --primary-orange: #FF7A00;
+  --primary-black: #111111;
+  --pastel-yellow: #FFF9E6;
+  --pastel-purple: #EAE4FF;
+  --pastel-mint: #E6FFF2;
+  
+  /* Background Colors */
+  --bg-dark: #FFFFFF; /* Reversing the variable semantics to keep it simple, it's actually light now */
+  --bg-darker: #F8F9FA;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8F9FA;
+  --bg-elevated: #FFFFFF;
+  --bg-placeholder: #F1F3F5;
+
+  /* Text Colors */
+  --text-primary: #111111;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-gold: #FF7A00; /* Reusing gold var for orange accent */
+
+  /* Glass Effect */
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-bg-hover: #F8F9FA;
+  --glass-border: #E5E7EB;
+  --glass-border-hover: #D1D5DB;
+
+  /* Gradients */
+  --gradient-brand: linear-gradient(135deg, #FF7A00, #FF9B3F);
+  --gradient-gold: linear-gradient(135deg, #FF7A00, #FF9B3F);
+  --gradient-card: linear-gradient(145deg, #FFFFFF 0%, #F8F9FA 100%);
+
+  /* Shadows (Soft & Modern) */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-gold: 0 4px 20px rgba(255, 122, 0, 0.2);
+  --shadow-glow: 0 4px 30px rgba(255, 122, 0, 0.3);
+
+  /* Border Radius (Pill shapes) */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px; 
+
+  /* Transitions */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Spacing */
+  --container-max: 1280px;
+  --container-padding: 24px;
+  --section-gap: 120px;
+  --navbar-height: 80px;
+
+  /* Typography */
+  --font-heading: 'Poppins', sans-serif;
+  --font-body: 'Poppins', sans-serif;
+}
+
+/* ============================================
+   Global Reset & Base Styles
+   ============================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  position: relative;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+
+h1 { font-size: clamp(3rem, 6vw, 4.5rem); letter-spacing: -2px; line-height: 1.1; }
+h2 { font-size: 2.25rem; }
+h3 { font-size: 1.5rem; }
+
+a {
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: all var(--transition-normal);
+}
+
+a:hover {
+  color: var(--primary-magenta);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font-body);
+  border: none;
+  outline: none;
+  background: none;
+}
+
+input, textarea, select {
+  font-family: var(--font-body);
+  outline: none;
+  border: none;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+/* ============================================
+   Typography
+   ============================================ */
+/* Headings handled in global styles above */
+
+p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* ============================================
+   Layout Utilities
+   ============================================ */
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+  width: 100%;
+}
+
+.section {
+  padding: var(--section-gap) 0;
+  position: relative;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.section-header h2 {
+  margin-bottom: 16px;
+}
+
+.section-header .accent-line {
+  width: 60px;
+  height: 3px;
+  background: var(--gradient-gold);
+  margin: 0 auto 20px;
+  border-radius: var(--radius-full);
+}
+
+.section-header p {
+  max-width: 600px;
+  margin: 0 auto;
+  font-size: 1.1rem;
+}
+
+/* ============================================
+   Button Styles
+   ============================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 36px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--primary-orange);
+  color: #FFFFFF;
+}
+
+.btn-primary:hover {
+  background: #E66D00;
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: #FFFFFF;
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-darker);
+  border-color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.btn-brand {
+  background: var(--gradient-brand);
+  color: white;
+}
+
+.btn-brand:hover {
+  box-shadow: 0 4px 20px rgba(233, 30, 140, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-icon {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================
+   Card Styles
+   ============================================ */
+.card {
+  background: var(--gradient-card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.card:hover {
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--shadow-gold);
+  transform: translateY(-4px);
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+}
+
+.glass-card:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+}
+
+/* ============================================
+   Gold Text Accent
+   ============================================ */
+.gold-text {
+  color: var(--primary-orange);
+}
+
+.brand-text {
+  color: var(--primary-orange);
+}
+
+.shimmer-text {
+  color: var(--primary-orange);
+}
+
+/* ============================================
+   Input Styles
+   ============================================ */
+.input-field {
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: all var(--transition-fast);
+}
+
+.input-field:focus {
+  border-color: var(--primary-gold);
+  box-shadow: 0 0 0 3px rgba(197, 165, 90, 0.1);
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+/* ============================================
+   Badge Styles
+   ============================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.badge-gold {
+  background: rgba(197, 165, 90, 0.15);
+  color: var(--primary-gold);
+  border: 1px solid rgba(197, 165, 90, 0.3);
+}
+
+.badge-discount {
+  background: rgba(233, 30, 140, 0.15);
+  color: var(--accent-magenta);
+  border: 1px solid rgba(233, 30, 140, 0.3);
+}
+
+.badge-new {
+  background: rgba(245, 166, 35, 0.15);
+  color: var(--accent-orange);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(197, 165, 90, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(197, 165, 90, 0.5), 0 0 40px rgba(197, 165, 90, 0.2); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #b8860b 0%,
+    #ffd700 25%,
+    #ff8c00 50%,
+    #ffd700 75%,
+    #b8860b 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-darker);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-navy-light);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-gold-dark);
+}
+
+/* ============================================
+   Selection Styling
+   ============================================ */
+::selection {
+  background: rgba(197, 165, 90, 0.3);
+  color: var(--text-primary);
+}
+
+/* ============================================
+   Responsive Grid
+   ============================================ */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-2 { grid-template-columns: 1fr; }
+  
+  :root {
+    --section-gap: 60px;
+    --container-padding: 16px;
+    --navbar-height: 64px;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-4 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+}
