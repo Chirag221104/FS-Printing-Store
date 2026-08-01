@@ -541,6 +541,46 @@
     padding: 40px 0 60px;
   }
   
+  .showcaseSection {
+    padding: 24px 0 40px;
+    overflow: hidden;
+  }
+  
+  .showcaseLayout {
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+  
+  .cardsRow {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .pastelCard {
+    width: calc(50% - 8px);
+    max-width: 160px;
+    height: 220px;
+    padding: 16px;
+    border-radius: 60px;
+  }
+  
+  .cardImg {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .cardPrice {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+  
+  .pricingInfo {
+    display: none;
+  }
+  
   .categoriesGrid {
     grid-template-columns: repeat(2, 1fr);
   }

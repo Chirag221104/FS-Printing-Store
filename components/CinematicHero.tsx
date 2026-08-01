@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import styles from './CinematicHero.module.css';
 
 const TOTAL_FRAMES = 240;
@@ -17,35 +17,14 @@ export default function CinematicHero() {
   const currentFrameRef = useRef(0);
   const targetFrameRef = useRef(0);
   const rafRef = useRef<number | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const scrollHandlerAttached = useRef(false);
+  const canvasReady = useRef(false);
+  const [firstFrameReady, setFirstFrameReady] = useState(false);
   const [loadProgress, setLoadProgress] = useState(0);
+  const [fullyLoaded, setFullyLoaded] = useState(false);
 
-  // Preload all frames
-  useEffect(() => {
-    const images: HTMLImageElement[] = [];
-    let loadedCount = 0;
-
-    for (let i = 1; i <= TOTAL_FRAMES; i++) {
-      const img = new Image();
-      img.src = getFramePath(i);
-      img.onload = () => {
-        loadedCount++;
-        setLoadProgress(Math.floor((loadedCount / TOTAL_FRAMES) * 100));
-        if (loadedCount === TOTAL_FRAMES) {
-          imagesRef.current = images;
-          setLoaded(true);
-        }
-      };
-      img.onerror = () => {
-        loadedCount++;
-        setLoadProgress(Math.floor((loadedCount / TOTAL_FRAMES) * 100));
-      };
-      images.push(img);
-    }
-  }, []);
-
-  // Draw a specific frame on canvas
-  const drawFrame = (frameIndex: number) => {
+  // Draw a specific frame on canvas (only if that frame's image is loaded)
+  const drawFrame = useCallback((frameIndex: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -53,56 +32,48 @@ export default function CinematicHero() {
 
     const clamped = Math.max(0, Math.min(frameIndex, TOTAL_FRAMES - 1));
     const img = imagesRef.current[clamped];
-    if (img && img.complete) {
+    if (img && img.complete && img.naturalWidth > 0) {
+      // Set canvas size from image on first draw
+      if (!canvasReady.current) {
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvasReady.current = true;
+      }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
-  };
+  }, []);
 
-  // Scroll-driven animation with smooth interpolation
-  useEffect(() => {
-    if (!loaded) return;
+  // Start scroll-driven animation — called once first frame is ready
+  const startScrollAnimation = useCallback(() => {
+    if (scrollHandlerAttached.current) return;
+    scrollHandlerAttached.current = true;
 
-    const canvas = canvasRef.current;
     const section = sectionRef.current;
-    if (!canvas || !section) return;
-
-    // Set canvas resolution from first image
-    const firstImg = imagesRef.current[0];
-    if (firstImg) {
-      canvas.width = firstImg.naturalWidth;
-      canvas.height = firstImg.naturalHeight;
-    }
+    if (!section) return;
 
     drawFrame(0);
 
-    // Update target frame on scroll — maps scroll position within the section to frame index
     const handleScroll = () => {
       const rect = section.getBoundingClientRect();
       const sectionHeight = section.offsetHeight;
       const viewportHeight = window.innerHeight;
-      
+
       // -rect.top = how many pixels we've scrolled past the top of the section
-      // scrollableDistance = total scrollable range within the section before it unsticks
       const scrolled = -rect.top;
       const scrollableDistance = sectionHeight - viewportHeight;
-      
-      // Clamp progress between 0 and 1
+
       const progress = Math.min(Math.max(scrolled / scrollableDistance, 0), 1);
-      
       targetFrameRef.current = Math.floor(progress * (TOTAL_FRAMES - 1));
     };
 
-    // Smooth lerp animation loop — runs independently of scroll events
+    // Smooth lerp loop
     const lerp = () => {
       const target = targetFrameRef.current;
       const current = currentFrameRef.current;
-
-      // Ease toward target (higher = snappier response to scroll)
       const ease = 0.25;
       const next = current + (target - current) * ease;
 
-      // Only redraw if we moved enough
       const rounded = Math.round(next);
       if (rounded !== Math.round(current)) {
         drawFrame(rounded);
@@ -113,19 +84,68 @@ export default function CinematicHero() {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
+    handleScroll(); // set initial position
     rafRef.current = requestAnimationFrame(lerp);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [loaded]);
+  }, [drawFrame]);
+
+  // Preload all frames — show canvas as soon as first frame loads
+  useEffect(() => {
+    const images: HTMLImageElement[] = new Array(TOTAL_FRAMES);
+    let loadedCount = 0;
+    let firstLoaded = false;
+
+    for (let i = 0; i < TOTAL_FRAMES; i++) {
+      const img = new Image();
+      img.src = getFramePath(i + 1); // frames are 1-indexed
+      img.onload = () => {
+        loadedCount++;
+        setLoadProgress(Math.floor((loadedCount / TOTAL_FRAMES) * 100));
+
+        // As soon as the FIRST frame is ready, show canvas and start animation
+        if (!firstLoaded && i === 0) {
+          firstLoaded = true;
+          setFirstFrameReady(true);
+        }
+
+        if (loadedCount === TOTAL_FRAMES) {
+          setFullyLoaded(true);
+        }
+      };
+      img.onerror = () => {
+        loadedCount++;
+        setLoadProgress(Math.floor((loadedCount / TOTAL_FRAMES) * 100));
+        if (loadedCount === TOTAL_FRAMES) {
+          setFullyLoaded(true);
+        }
+      };
+      images[i] = img;
+    }
+
+    imagesRef.current = images; // assign immediately so drawFrame can access them
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  // Start scroll handler as soon as first frame is ready
+  useEffect(() => {
+    if (!firstFrameReady) return;
+    const cleanup = startScrollAnimation();
+    return cleanup;
+  }, [firstFrameReady, startScrollAnimation]);
+
+  const showLoadingOverlay = !fullyLoaded && !firstFrameReady;
 
   return (
     <section ref={sectionRef} className={styles.cinematicSection}>
       <div className={styles.stickyContainer}>
-        {!loaded && (
+        {showLoadingOverlay && (
           <div className={styles.loadingOverlay}>
             <div className={styles.loadingContent}>
               <div className={styles.loaderRing}>
@@ -142,7 +162,7 @@ export default function CinematicHero() {
 
         <canvas
           ref={canvasRef}
-          className={`${styles.canvas} ${loaded ? styles.canvasVisible : ''}`}
+          className={`${styles.canvas} ${firstFrameReady ? styles.canvasVisible : ''}`}
         />
 
         <div className={styles.gradientOverlay} />
