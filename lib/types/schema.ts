@@ -1,4 +1,6 @@
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, FieldValue } from 'firebase/firestore';
+
+export type FirestoreTimestamp = Timestamp | FieldValue | Date | string | null;
 
 export interface Product {
   id: string; // Firestore Document ID
@@ -22,8 +24,8 @@ export interface Product {
   featured: boolean;
   isActive: boolean;
   trackInventory: boolean;
-  createdAt: Timestamp | Date | string | null;
-  updatedAt: Timestamp | Date | string | null;
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
 }
 
 export interface Variant {
@@ -132,8 +134,8 @@ export interface Order {
   paymentId?: string; // Razorpay Order ID
   transactionId?: string; // Razorpay Payment ID
   invoiceId?: string;
-  createdAt: Timestamp | Date | string | null;
-  updatedAt: Timestamp | Date | string | null;
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
 }
 
 export interface Coupon {
@@ -143,7 +145,7 @@ export interface Coupon {
   value: number; // e.g., 10 (for 10%) or 500 (for ₹500)
   minOrderValue?: number;
   maxDiscountCap?: number;
-  expiryDate?: Timestamp | Date | string | null;
+  expiryDate?: FirestoreTimestamp;
   usageLimit?: number; // Total times this can be used globally
   timesUsed: number;
   perUserLimit?: number; // How many times a single UID can use this
@@ -166,6 +168,6 @@ export interface TimelineEvent {
   id: string;
   status: 'Pending' | 'Artwork Approved' | 'Printing' | 'Quality Check' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
   message: string; // Customer-facing note
-  createdAt: Timestamp | Date | string | null;
+  createdAt: FirestoreTimestamp;
   updatedBy: string; // Admin UID or "System"
 }

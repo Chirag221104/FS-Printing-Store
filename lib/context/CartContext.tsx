@@ -25,6 +25,7 @@ interface CartContextType {
   clearCart: () => Promise<void>;
   totalItems: number;
   totalPrice: number;
+  totalSavings: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   isLoading: boolean;
@@ -152,6 +153,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalSavings = 0;
 
   return (
     <CartContext.Provider value={{
@@ -162,6 +164,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       clearCart,
       totalItems,
       totalPrice,
+      totalSavings,
       isCartOpen,
       setIsCartOpen,
       isLoading
