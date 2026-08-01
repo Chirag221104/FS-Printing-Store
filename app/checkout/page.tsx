@@ -64,22 +64,49 @@ export default function CheckoutPage() {
         const hydratedItems: OrderItem[] = [];
         
         for (const item of items) {
-          // Fetch product
-          const productRef = doc(db, 'products', item.productId);
-          const productSnap = await getDoc(productRef);
-          
-          // Fetch variant
-          const variantRef = doc(db, `products/${item.productId}/variants`, item.variantId);
-          const variantSnap = await getDoc(variantRef);
+          const targetProdId = item.productId || item.id;
+          const targetVarId = item.variantId;
 
-          if (productSnap.exists() && variantSnap.exists()) {
-            const orderItem = calculateLineItemPrice(
-              item, 
-              { ...variantSnap.data(), id: variantSnap.id }, 
-              { ...productSnap.data(), id: productSnap.id }
-            );
-            hydratedItems.push(orderItem);
+          let hydratedItem: OrderItem | null = null;
+
+          if (targetProdId && targetVarId && targetVarId !== 'default') {
+            try {
+              const productRef = doc(db, 'products', targetProdId);
+              const productSnap = await getDoc(productRef);
+              
+              const variantRef = doc(db, `products/${targetProdId}/variants`, targetVarId);
+              const variantSnap = await getDoc(variantRef);
+
+              if (productSnap.exists() && variantSnap.exists()) {
+                hydratedItem = calculateLineItemPrice(
+                  item, 
+                  { ...variantSnap.data(), id: variantSnap.id }, 
+                  { ...productSnap.data(), id: productSnap.id }
+                );
+              }
+            } catch (err) {
+              console.warn('Could not fetch variant from Firestore, using cart item data', err);
+            }
           }
+
+          // Fallback for legacy items or products without separate Firestore variant docs
+          if (!hydratedItem) {
+            const price = item.price || 0;
+            const qty = item.quantity || 1;
+            hydratedItem = {
+              productId: targetProdId || 'legacy',
+              variantId: targetVarId || 'default',
+              sku: item.sku || 'ITEM',
+              name: item.name || 'Product',
+              image: item.image || '',
+              quantity: qty,
+              unitPrice: price,
+              totalPrice: price * qty,
+              customization: item.customization
+            };
+          }
+
+          hydratedItems.push(hydratedItem);
         }
 
         setOrderItems(hydratedItems);
