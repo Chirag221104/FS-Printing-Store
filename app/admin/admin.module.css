@@ -315,3 +315,46 @@
   cursor: pointer;
   font-weight: 500;
 }
+
+/* Mobile Responsiveness for Admin */
+@media (max-width: 900px) {
+  .adminLayout {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .sidebarNav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12px;
+    gap: 4px;
+  }
+
+  .navLink {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .topbar {
+    padding: 0 16px;
+    height: 60px;
+  }
+
+  .searchInput {
+    width: 160px;
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 16px -16px;
+    padding: 0 16px;
+  }
+}

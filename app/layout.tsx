@@ -1,8 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { CartProvider } from "@/lib/context/CartContext";
 import StorefrontLayoutWrapper from "@/components/StorefrontLayoutWrapper";
 import { Toaster } from 'react-hot-toast';
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "F.S Print Works | We Print Your Ideas — Custom T-Shirts, Mugs, Stickers & More",

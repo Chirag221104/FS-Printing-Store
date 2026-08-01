@@ -150,11 +150,11 @@
 .mobileOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 998;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9998;
   opacity: 0;
   visibility: hidden;
-  transition: all var(--transition-normal);
+  transition: all 0.3s ease;
 }
 
 .overlayOpen {
@@ -165,71 +165,71 @@
 .mobileMenu {
   position: fixed;
   top: 0;
-  right: -100%;
-  width: 300px;
+  left: -100%;
+  width: 80vw;
+  max-width: 320px;
   height: 100vh;
-  background: var(--bg-dark);
-  border-left: 1px solid var(--glass-border);
-  z-index: 999;
-  transition: right var(--transition-slow);
+  background: #ffffff !important;
+  color: #111111 !important;
+  z-index: 9999;
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.25);
   overflow-y: auto;
 }
 
 .menuVisible {
-  right: 0;
+  left: 0 !important;
 }
 
 .mobileMenuInner {
-  padding: 100px 32px 40px;
+  padding: 80px 20px 40px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .mobileLink {
   display: block;
-  padding: 16px 0;
-  font-size: 1.3rem;
+  padding: 14px 16px;
+  font-size: 1.15rem;
   font-family: var(--font-heading);
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--glass-border);
-  transition: all var(--transition-fast);
-  opacity: 0;
-  transform: translateX(20px);
-  animation: slideIn 0.4s ease forwards;
+  font-weight: 700;
+  color: #111111 !important;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  opacity: 1 !important;
+  transform: none !important;
+  transition: all 0.2s ease;
 }
 
 .mobileLink:hover,
-.mobileLinkActive {
-  color: var(--primary-gold);
-  padding-left: 12px;
-}
-
-@keyframes slideIn {
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.mobileLink.active {
+  color: #FF7A00 !important;
+  background: #fff4ea;
+  border-color: #FF7A00;
 }
 
 .mobileDivider {
   height: 1px;
-  background: var(--glass-border);
-  margin: 16px 0;
+  background: #e2e8f0;
+  margin: 8px 0;
 }
 
 .mobileCartBtn {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 0;
+  padding: 14px 16px;
   font-size: 1.1rem;
-  font-weight: 500;
-  color: var(--primary-gold);
-  background: none;
+  font-weight: 700;
+  color: #FFFFFF !important;
+  background: var(--primary-orange, #FF7A00);
+  border-radius: 10px;
   border: none;
   cursor: pointer;
+  justify-content: center;
 }
 
 .mobileCartBadge {
@@ -243,29 +243,31 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .navInner {
+    gap: 8px;
+    justify-content: flex-start;
+  }
+  
+  .navActions {
+    margin-left: auto;
+  }
+
   .navLinks {
     display: none;
   }
   
   .searchBtn {
-    display: none;
+    display: flex;
   }
   
   .menuBtn {
     display: flex;
   }
-  
-  .logoText {
-    display: none;
-  }
-
-  .logoIcon {
-    font-size: 1.3rem;
-  }
 }
 
 @media (max-width: 480px) {
   .mobileMenu {
-    width: 100%;
+    width: 85vw;
+    left: -85vw;
   }
 }

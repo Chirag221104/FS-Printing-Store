@@ -46,6 +46,15 @@ export default function Navbar() {
     <>
       <nav className={`${styles.navbar} ${scrolled ? styles.scrolled : ''}`}>
         <div className={`container ${styles.navInner}`}>
+          {/* Mobile Menu Button (Top Left before logo) */}
+          <button
+            className={styles.menuBtn}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+          </button>
+
           {/* Logo */}
           <Link href="/" className={styles.logo}>
             <img src={logoImg.src} alt="F.S Print Works" className={styles.logoImage} />
@@ -78,13 +87,6 @@ export default function Navbar() {
               {totalItems > 0 && (
                 <span className={styles.cartBadge}>{totalItems}</span>
               )}
-            </button>
-            <button
-              className={styles.menuBtn}
-              onClick={() => setMenuOpen(!menuOpen)}
-              aria-label="Toggle menu"
-            >
-              {menuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
             </button>
           </div>
         </div>

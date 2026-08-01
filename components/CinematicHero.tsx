@@ -76,14 +76,20 @@ export default function CinematicHero() {
 
     drawFrame(0);
 
-    // Update target frame on scroll
+    // Update target frame on scroll — maps scroll position within the section to frame index
     const handleScroll = () => {
       const rect = section.getBoundingClientRect();
       const sectionHeight = section.offsetHeight;
       const viewportHeight = window.innerHeight;
-      const scrollableDistance = sectionHeight - viewportHeight;
+      
+      // -rect.top = how many pixels we've scrolled past the top of the section
+      // scrollableDistance = total scrollable range within the section before it unsticks
       const scrolled = -rect.top;
+      const scrollableDistance = sectionHeight - viewportHeight;
+      
+      // Clamp progress between 0 and 1
       const progress = Math.min(Math.max(scrolled / scrollableDistance, 0), 1);
+      
       targetFrameRef.current = Math.floor(progress * (TOTAL_FRAMES - 1));
     };
 
@@ -92,8 +98,8 @@ export default function CinematicHero() {
       const target = targetFrameRef.current;
       const current = currentFrameRef.current;
 
-      // Ease toward target (lower = smoother/slower, higher = snappier)
-      const ease = 0.08;
+      // Ease toward target (higher = snappier response to scroll)
+      const ease = 0.25;
       const next = current + (target - current) * ease;
 
       // Only redraw if we moved enough
