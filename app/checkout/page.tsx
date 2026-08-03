@@ -230,9 +230,11 @@ export default function CheckoutPage() {
       grandTotal: pricing.grandTotal,
       status: 'placed',
       paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'Razorpay',
+      paymentStatus: 'pending',
       paymentId: paymentId || undefined,
       transactionId: transactionId || undefined,
       notes: formData.notes || undefined,
+      estimatedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // +7 days
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -342,6 +344,7 @@ export default function CheckoutPage() {
         try {
           await setDoc(doc(db, 'orders', newOrderId), { 
             status: 'confirmed',
+            paymentStatus: 'paid',
             transactionId: response.razorpay_payment_id,
             paymentId: response.razorpay_order_id || 'manual_test_order',
             updatedAt: serverTimestamp()

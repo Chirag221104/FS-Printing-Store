@@ -3,17 +3,32 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../admin.module.css';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, updateDoc, doc, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, query, orderBy, addDoc, serverTimestamp, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { Order, OrderStatus } from '@/lib/types/schema';
 import { FiCheckCircle, FiClock, FiPackage, FiTruck, FiXCircle } from 'react-icons/fi';
 
+const STATUS_WORKFLOW: Record<OrderStatus, OrderStatus[]> = {
+  placed: ['confirmed', 'cancelled'],
+  confirmed: ['processing', 'cancelled'],
+  processing: ['shipped', 'cancelled'],
+  shipped: ['delivered', 'cancelled'],
+  delivered: [],
+  cancelled: []
+};
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const ORDERS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchOrders();
@@ -22,13 +37,22 @@ export default function AdminOrders() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(ORDERS_PER_PAGE));
       const snapshot = await getDocs(q);
+      
       const ordersData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Order[];
+      
       setOrders(ordersData);
+      
+      if (snapshot.docs.length < ORDERS_PER_PAGE) {
+        setHasMore(false);
+      } else {
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        setHasMore(true);
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast.error('Failed to load orders');
@@ -36,15 +60,61 @@ export default function AdminOrders() {
     setLoading(false);
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+  const loadMoreOrders = async () => {
+    if (!lastVisible || !hasMore) return;
+    
+    setLoadingMore(true);
     try {
-      // 1. Update order document
+      const q = query(
+        collection(db, 'orders'), 
+        orderBy('createdAt', 'desc'), 
+        startAfter(lastVisible),
+        limit(ORDERS_PER_PAGE)
+      );
+      const snapshot = await getDocs(q);
+      
+      const newOrders = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      
+      setOrders([...orders, ...newOrders]);
+      
+      if (snapshot.docs.length < ORDERS_PER_PAGE) {
+        setHasMore(false);
+      } else {
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      }
+    } catch (error) {
+      console.error('Error fetching more orders:', error);
+      toast.error('Failed to load more orders');
+    }
+    setLoadingMore(false);
+  };
+
+  const isValidTransition = (currentStatus: OrderStatus, newStatus: OrderStatus) => {
+    const allowedNext = STATUS_WORKFLOW[currentStatus as keyof typeof STATUS_WORKFLOW] || [];
+    return allowedNext.includes(newStatus);
+  };
+
+  const updateOrderStatus = async (orderId: string, currentStatus: OrderStatus, newStatus: OrderStatus) => {
+    if (currentStatus === newStatus) return;
+    
+    if (!isValidTransition(currentStatus, newStatus)) {
+      toast.error(`Invalid transition from ${currentStatus} to ${newStatus}`);
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to change the status to ${newStatus.toUpperCase()}?`)) {
+      return;
+    }
+
+    try {
       await updateDoc(doc(db, 'orders', orderId), { 
         status: newStatus,
         updatedAt: serverTimestamp() 
       });
       
-      // 2. Add to timeline
       let message = `Order status updated to ${newStatus}`;
       if (newStatus === 'shipped') message = 'Your order has been shipped and is on the way.';
       if (newStatus === 'delivered') message = 'Your order has been delivered successfully.';
@@ -57,7 +127,6 @@ export default function AdminOrders() {
         updatedBy: 'Admin',
       });
 
-      // 3. Update local state
       setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
       toast.success(`Order status updated to ${newStatus}`);
       
@@ -79,6 +148,7 @@ export default function AdminOrders() {
     });
   };
 
+  // Note: Client-side filtering only applies to currently loaded pages
   const filteredOrders = orders.filter(o => {
     const matchesStatus = statusFilter === 'all' || o.status === statusFilter;
     const searchLower = searchQuery.toLowerCase();
@@ -101,7 +171,7 @@ export default function AdminOrders() {
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <input 
           type="text" 
-          placeholder="Search by ID, Name, Phone..." 
+          placeholder="Search loaded orders (ID, Name, Phone)..." 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', flexGrow: 1, maxWidth: '400px' }}
@@ -121,7 +191,7 @@ export default function AdminOrders() {
         </select>
       </div>
       
-      <div className={styles.tableContainer}>
+      <div className={styles.tableContainer} style={{ marginBottom: '24px' }}>
         <table className={styles.adminTable}>
           <thead>
             <tr>
@@ -129,7 +199,7 @@ export default function AdminOrders() {
               <th>Date</th>
               <th>Customer</th>
               <th>Total</th>
-              <th>Method</th>
+              <th>Payment</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -138,7 +208,7 @@ export default function AdminOrders() {
             {loading ? (
               <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>Loading orders...</td></tr>
             ) : filteredOrders.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>No orders found.</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>No orders found matching criteria.</td></tr>
             ) : (
               filteredOrders.map(order => (
                 <tr key={order.id}>
@@ -150,14 +220,22 @@ export default function AdminOrders() {
                   </td>
                   <td style={{ fontWeight: 600 }}>₹{order.grandTotal?.toLocaleString()}</td>
                   <td>
-                    <span className={styles.badge} style={{ background: '#f1f5f9', color: '#475569' }}>
+                    <div style={{ fontSize: '0.9rem', color: '#333' }}>
                       {order.paymentMethod === 'Cash on Delivery' ? 'COD' : 'Online'}
+                    </div>
+                    <span style={{ 
+                      fontSize: '0.75rem', 
+                      fontWeight: 700, 
+                      textTransform: 'uppercase',
+                      color: order.paymentStatus === 'paid' ? '#10b981' : order.paymentStatus === 'failed' ? '#ef4444' : '#f59e0b'
+                    }}>
+                      {order.paymentStatus || 'pending'}
                     </span>
                   </td>
                   <td>
                     <select 
                       value={order.status}
-                      onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
+                      onChange={(e) => updateOrderStatus(order.id, order.status, e.target.value as OrderStatus)}
                       style={{ padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', textTransform: 'capitalize' }}
                     >
                       <option value="placed">Placed</option>
@@ -175,6 +253,19 @@ export default function AdminOrders() {
           </tbody>
         </table>
       </div>
+
+      {hasMore && !loading && statusFilter === 'all' && searchQuery === '' && (
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <button 
+            onClick={loadMoreOrders} 
+            disabled={loadingMore}
+            className={styles.secondaryBtn}
+            style={{ padding: '10px 24px', cursor: loadingMore ? 'not-allowed' : 'pointer' }}
+          >
+            {loadingMore ? 'Loading...' : 'Load More Orders'}
+          </button>
+        </div>
+      )}
 
       {viewingOrder && (
         <div className={styles.modalOverlay} onClick={() => setViewingOrder(null)}>
@@ -202,14 +293,30 @@ export default function AdminOrders() {
               <div>
                 <h3 style={{ fontSize: '1rem', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>Order Info</h3>
                 <p><strong>Date:</strong> {formatDate(viewingOrder.createdAt)}</p>
-                <p><strong>Payment Method:</strong> {viewingOrder.paymentMethod}</p>
+                {viewingOrder.estimatedDeliveryDate && (
+                  <p><strong>Est. Delivery:</strong> {formatDate(viewingOrder.estimatedDeliveryDate)}</p>
+                )}
+                
+                <h3 style={{ fontSize: '1rem', margin: '16px 0 8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>Payment Info</h3>
+                <p><strong>Method:</strong> {viewingOrder.paymentMethod}</p>
+                <p>
+                  <strong>Status:</strong> 
+                  <span style={{ 
+                    marginLeft: '8px',
+                    textTransform: 'uppercase', 
+                    fontWeight: 700, 
+                    color: viewingOrder.paymentStatus === 'paid' ? '#10b981' : viewingOrder.paymentStatus === 'failed' ? '#ef4444' : '#f59e0b' 
+                  }}>
+                    {viewingOrder.paymentStatus || 'pending'}
+                  </span>
+                </p>
                 {viewingOrder.paymentId && <p><strong>Payment ID:</strong> {viewingOrder.paymentId}</p>}
                 
-                <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <strong>Status:</strong> 
+                <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <strong>Update Workflow:</strong> 
                   <select 
                     value={viewingOrder.status}
-                    onChange={(e) => updateOrderStatus(viewingOrder.id, e.target.value as OrderStatus)}
+                    onChange={(e) => updateOrderStatus(viewingOrder.id, viewingOrder.status, e.target.value as OrderStatus)}
                     style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', textTransform: 'capitalize', fontWeight: 600 }}
                   >
                     <option value="placed">Placed</option>

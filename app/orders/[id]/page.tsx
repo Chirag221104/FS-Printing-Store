@@ -137,7 +137,14 @@ export default function OrderDetailsPage() {
             
             {/* Timeline */}
             <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Order Status Updates</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f3f4f6', paddingBottom: '12px' }}>
+                <h2 className={styles.cardTitle} style={{ borderBottom: 'none', margin: 0, padding: 0 }}>Order Status Updates</h2>
+                {order.estimatedDeliveryDate && (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Est. Delivery: <strong>{formatDate(order.estimatedDeliveryDate).split(',')[0]}</strong>
+                  </div>
+                )}
+              </div>
               <div className={styles.timeline}>
                 {timeline.length === 0 ? (
                   <p className={styles.emptyText}>No status updates yet.</p>
@@ -226,6 +233,9 @@ export default function OrderDetailsPage() {
                 <FiCreditCard className={styles.infoIcon} />
                 <div>
                   <p className={styles.infoMain}>{order.paymentMethod}</p>
+                  <p className={styles.infoSub}>
+                    Status: <strong style={{ textTransform: 'capitalize', color: order.paymentStatus === 'paid' ? '#10b981' : order.paymentStatus === 'failed' ? '#ef4444' : 'var(--text-secondary)' }}>{order.paymentStatus}</strong>
+                  </p>
                   {order.paymentId && <p className={styles.infoSub}>ID: {order.paymentId}</p>}
                 </div>
               </div>

@@ -116,6 +116,7 @@ export interface OrderItem {
 }
 
 export type OrderStatus = 'placed' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 
 export interface Order {
   id: string;
@@ -135,10 +136,12 @@ export interface Order {
   grandTotal: number;
   status: OrderStatus;
   paymentMethod: string;
+  paymentStatus: PaymentStatus;
   paymentId?: string; // Razorpay Order ID
   transactionId?: string; // Razorpay Payment ID
   invoiceId?: string;
   notes?: string;
+  estimatedDeliveryDate?: FirestoreTimestamp;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;
 }
