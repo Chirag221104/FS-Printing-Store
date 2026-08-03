@@ -1,14 +1,20 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
-import { FiPackage } from 'react-icons/fi';
+import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { Order } from '@/lib/types/schema';
+import { FiPackage, FiChevronRight, FiClock, FiCheckCircle, FiTruck, FiXCircle } from 'react-icons/fi';
 import Link from 'next/link';
+import styles from './page.module.css';
 
 export default function OrdersPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -16,43 +22,143 @@ export default function OrdersPage() {
     }
   }, [user, isLoading, router]);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchOrders = async () => {
+      setFetching(true);
+      try {
+        const q = query(
+          collection(db, 'orders'),
+          where('customerId', '==', user.uid),
+          orderBy('createdAt', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+        setOrders(ordersData);
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      }
+      setFetching(false);
+    };
+
+    fetchOrders();
+  }, [user]);
+
+  if (isLoading || fetching) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '80px' }}>
-        <p style={{ color: '#666' }}>Loading...</p>
+      <div className={styles.pageContainer}>
+        <div className={styles.loadingState}>
+          <div className={styles.spinner} />
+          <p>Loading your orders...</p>
+        </div>
       </div>
     );
   }
 
+  if (!user) return null;
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'placed':
+        return { icon: <FiClock />, color: '#3b82f6', bg: '#eff6ff', label: 'Placed' };
+      case 'confirmed':
+        return { icon: <FiCheckCircle />, color: '#10b981', bg: '#ecfdf5', label: 'Confirmed' };
+      case 'processing':
+        return { icon: <FiPackage />, color: '#f59e0b', bg: '#fffbeb', label: 'Processing' };
+      case 'shipped':
+        return { icon: <FiTruck />, color: '#8b5cf6', bg: '#f5f3ff', label: 'Shipped' };
+      case 'delivered':
+        return { icon: <FiCheckCircle />, color: '#059669', bg: '#d1fae5', label: 'Delivered' };
+      case 'cancelled':
+        return { icon: <FiXCircle />, color: '#ef4444', bg: '#fef2f2', label: 'Cancelled' };
+      default:
+        return { icon: <FiClock />, color: '#64748b', bg: '#f8fafc', label: status };
+    }
+  };
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return 'N/A';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
-    <div style={{ minHeight: '100vh', padding: '120px 20px 60px', background: '#f9fafb' }}>
-      <div style={{ maxWidth: '720px', margin: '0 auto', textAlign: 'center' }}>
-        <div style={{
-          background: '#ffffff',
-          padding: '60px 40px',
-          borderRadius: '24px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-        }}>
-          <FiPackage size={48} color="#999" style={{ marginBottom: '16px' }} />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111', marginBottom: '8px' }}>My Orders</h1>
-          <p style={{ color: '#666', marginBottom: '24px' }}>
-            Order tracking is coming soon! You&apos;ll be able to view and track all your orders here.
-          </p>
-          <Link href="/shop" style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '12px 24px',
-            background: 'linear-gradient(135deg, #FF7A00, #FF9B3F)',
-            color: '#fff',
-            fontWeight: 700,
-            borderRadius: '999px',
-            textDecoration: 'none',
-          }}>
-            Start Shopping
-          </Link>
+    <div className={styles.pageContainer}>
+      <div className={styles.contentWrapper}>
+        <div className={styles.pageHeader}>
+          <h1 className={styles.pageTitle}>My Orders</h1>
+          <p className={styles.pageSubtitle}>View and track your recent orders</p>
         </div>
+
+        {orders.length === 0 ? (
+          <div className={styles.emptyState}>
+            <FiPackage size={48} />
+            <h2>No orders yet</h2>
+            <p>When you place an order, it will appear here.</p>
+            <Link href="/shop" className={styles.shopBtn}>
+              Start Shopping
+            </Link>
+          </div>
+        ) : (
+          <div className={styles.orderList}>
+            {orders.map(order => {
+              const statusConfig = getStatusConfig(order.status);
+              
+              return (
+                <Link href={`/orders/${order.id}`} key={order.id} className={styles.orderCard}>
+                  <div className={styles.orderHeader}>
+                    <div>
+                      <span className={styles.orderId}>Order #{order.id.slice(0, 8).toUpperCase()}</span>
+                      <span className={styles.orderDate}>{formatDate(order.createdAt)}</span>
+                    </div>
+                    <div 
+                      className={styles.statusBadge} 
+                      style={{ color: statusConfig.color, backgroundColor: statusConfig.bg }}
+                    >
+                      {statusConfig.icon}
+                      {statusConfig.label}
+                    </div>
+                  </div>
+                  
+                  <div className={styles.orderItems}>
+                    {/* Show up to 3 item images */}
+                    <div className={styles.itemImages}>
+                      {order.items.slice(0, 3).map((item, idx) => (
+                        <div key={idx} className={styles.itemImageWrapper}>
+                          <img src={item.image || '/placeholder.png'} alt={item.name} />
+                        </div>
+                      ))}
+                      {order.items.length > 3 && (
+                        <div className={styles.moreItemsBadge}>
+                          +{order.items.length - 3}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className={styles.orderSummary}>
+                      <div className={styles.itemCount}>
+                        {order.items.length} {order.items.length === 1 ? 'Item' : 'Items'}
+                      </div>
+                      <div className={styles.orderTotal}>
+                        ₹{order.grandTotal.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className={styles.orderFooter}>
+                    <span className={styles.viewDetailsText}>View Order Details</span>
+                    <FiChevronRight size={18} />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/context/CartContext';
+import { useAuth } from '@/lib/context/AuthContext';
 import { FiArrowLeft, FiCheck, FiLock, FiGift, FiCreditCard, FiTruck } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
@@ -22,6 +23,7 @@ declare global {
 
 export default function CheckoutPage() {
   const { items, clearCart, isLoading: cartLoading } = useCart();
+  const { user, profile } = useAuth();
   
   // Pricing State
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -40,11 +42,40 @@ export default function CheckoutPage() {
   const [formData, setFormData] = useState({
     name: '', phone: '', email: '', 
     addressLine1: '', addressLine2: '', landmark: '',
-    city: '', pincode: '', notes: '',
+    city: '', state: 'Maharashtra', pincode: '', notes: '',
   });
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'razorpay'>('razorpay');
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState('');
+
+  // Prefill form from auth profile
+  useEffect(() => {
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        name: prev.name || profile.displayName || '',
+        email: prev.email || profile.email || '',
+        phone: prev.phone || profile.phone || '',
+      }));
+      // Auto-fill from default address if available
+      const defaultAddr = (profile.addresses || []).find(a => a.isDefault);
+      if (defaultAddr) {
+        setFormData(prev => {
+          // Only overwrite if the fields are currently empty to not destroy user input
+          return {
+            ...prev,
+            name: prev.name || defaultAddr.fullName || profile.displayName || '',
+            phone: prev.phone || defaultAddr.phone || profile.phone || '',
+            addressLine1: prev.addressLine1 || defaultAddr.addressLine1 || '',
+            addressLine2: prev.addressLine2 || defaultAddr.addressLine2 || '',
+            city: prev.city || defaultAddr.city || '',
+            state: prev.state || defaultAddr.state || 'Maharashtra',
+            pincode: prev.pincode || defaultAddr.pincode || '',
+          };
+        });
+      }
+    }
+  }, [profile]);
   const [processing, setProcessing] = useState(false);
 
   // 1. Hydrate Cart with Firestore Data & Calculate Pricing
@@ -174,8 +205,10 @@ export default function CheckoutPage() {
     if (!pricing) throw new Error("Pricing not calculated");
 
     const orderData: Omit<Order, 'id'> = {
-      customerId: 'guest', // Update when auth is ready
+      customerId: user?.uid || 'guest',
       customerEmail: formData.email,
+      customerName: formData.name,
+      customerPhone: formData.phone,
       shippingAddress: {
         id: 'addr_' + Date.now(),
         isDefault: true,
@@ -184,7 +217,7 @@ export default function CheckoutPage() {
         line1: formData.addressLine1,
         line2: formData.addressLine2,
         city: formData.city,
-        state: 'Maharashtra', // Can be dynamic later
+        state: formData.state || 'Maharashtra',
         pincode: formData.pincode,
       },
       items: orderItems,
@@ -195,15 +228,29 @@ export default function CheckoutPage() {
       gstAmount: pricing.gstAmount,
       shippingFee: pricing.shippingFee,
       grandTotal: pricing.grandTotal,
-      status: 'pending_payment', // Default for razorpay creation, changed to processing after payment
+      status: 'placed',
       paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'Razorpay',
       paymentId: paymentId || undefined,
       transactionId: transactionId || undefined,
+      notes: formData.notes || undefined,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    const orderRef = await addDoc(collection(db, 'orders'), orderData);
+    // Sanitize to remove undefined values before Firestore write
+    const sanitizedOrder = JSON.parse(JSON.stringify(orderData));
+    sanitizedOrder.createdAt = serverTimestamp();
+    sanitizedOrder.updatedAt = serverTimestamp();
+
+    const orderRef = await addDoc(collection(db, 'orders'), sanitizedOrder);
+
+    // Create initial timeline event
+    await addDoc(collection(db, `orders/${orderRef.id}/timeline`), {
+      status: 'Order Placed',
+      message: `Order placed via ${paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}`,
+      createdAt: serverTimestamp(),
+      updatedBy: 'System',
+    });
     
     // Update Customer Profile
     const customerRef = doc(db, 'customers', formData.phone);
@@ -257,8 +304,8 @@ export default function CheckoutPage() {
     try {
       if (paymentMethod === 'cod') {
         const newOrderId = await saveOrder('Pending');
-        // Update status immediately for COD
-        await setDoc(doc(db, 'orders', newOrderId), { status: 'processing' }, { merge: true });
+        // Update status to confirmed for COD
+        await setDoc(doc(db, 'orders', newOrderId), { status: 'confirmed', updatedAt: serverTimestamp() }, { merge: true });
         
         await sendConfirmationEmail(newOrderId, 'Cash on Delivery', pricing.grandTotal);
         setOrderId(newOrderId);
@@ -294,11 +341,19 @@ export default function CheckoutPage() {
         // Success Handler
         try {
           await setDoc(doc(db, 'orders', newOrderId), { 
-            status: 'processing',
+            status: 'confirmed',
             transactionId: response.razorpay_payment_id,
             paymentId: response.razorpay_order_id || 'manual_test_order',
             updatedAt: serverTimestamp()
           }, { merge: true });
+
+          // Add payment confirmed timeline event
+          await addDoc(collection(db, `orders/${newOrderId}/timeline`), {
+            status: 'Payment Confirmed',
+            message: `Payment received via Razorpay (${response.razorpay_payment_id})`,
+            createdAt: serverTimestamp(),
+            updatedBy: 'System',
+          });
 
           await sendConfirmationEmail(newOrderId, 'Razorpay (Paid)', pricing.grandTotal);
           setOrderId(newOrderId);

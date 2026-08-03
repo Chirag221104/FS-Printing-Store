@@ -115,10 +115,14 @@ export interface OrderItem {
   };
 }
 
+export type OrderStatus = 'placed' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
 export interface Order {
   id: string;
   customerId: string; // UID or "guest_sessionId"
   customerEmail: string;
+  customerName: string;
+  customerPhone: string;
   shippingAddress: Address; // Frozen snapshot
   billingAddress?: Address;
   items: OrderItem[]; // Immutable snapshot of products bought
@@ -129,11 +133,12 @@ export interface Order {
   gstAmount: number; // For CGST/SGST/IGST breakdown in future
   shippingFee: number;
   grandTotal: number;
-  status: 'pending_payment' | 'processing' | 'printing' | 'qc' | 'shipped' | 'delivered' | 'cancelled';
+  status: OrderStatus;
   paymentMethod: string;
   paymentId?: string; // Razorpay Order ID
   transactionId?: string; // Razorpay Payment ID
   invoiceId?: string;
+  notes?: string;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;
 }
