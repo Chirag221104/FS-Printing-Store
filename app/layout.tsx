@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/lib/context/AuthContext";
 import { CartProvider } from "@/lib/context/CartContext";
 import StorefrontLayoutWrapper from "@/components/StorefrontLayoutWrapper";
 import { Toaster } from 'react-hot-toast';
@@ -30,12 +31,15 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Toaster position="bottom-right" />
-        <CartProvider>
-          <StorefrontLayoutWrapper>
-            {children}
-          </StorefrontLayoutWrapper>
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <StorefrontLayoutWrapper>
+              {children}
+            </StorefrontLayoutWrapper>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

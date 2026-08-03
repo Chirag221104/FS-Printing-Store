@@ -41,12 +41,48 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string>('');
 
-  // 1. Establish Session/Auth ID
+  // 1. Establish Session/Auth ID and merge guest cart on login
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        const guestSid = localStorage.getItem('guest_session_id');
         setSessionId(user.uid);
+
+        // Merge guest cart into user cart if guest session exists
+        if (guestSid) {
+          try {
+            const guestCartRef = doc(db, 'carts', guestSid);
+            const guestSnap = await getDoc(guestCartRef);
+            if (guestSnap.exists()) {
+              const guestItems: CartItem[] = guestSnap.data().items || [];
+              if (guestItems.length > 0) {
+                // Load user's existing cart
+                const userCartRef = doc(db, 'carts', user.uid);
+                const userSnap = await getDoc(userCartRef);
+                const userItems: CartItem[] = userSnap.exists() ? (userSnap.data().items || []) : [];
+
+                // Merge: add guest items that don't already exist in user cart
+                const mergedItems = [...userItems];
+                for (const guestItem of guestItems) {
+                  const exists = mergedItems.some(i => i.id === guestItem.id);
+                  if (!exists) {
+                    mergedItems.push(guestItem);
+                  }
+                }
+
+                // Save merged cart to user's cart
+                const sanitized = JSON.parse(JSON.stringify(mergedItems));
+                await setDoc(userCartRef, { items: sanitized, updatedAt: new Date().toISOString() }, { merge: true });
+                setItems(mergedItems);
+              }
+            }
+            // Clear guest session
+            localStorage.removeItem('guest_session_id');
+          } catch (err) {
+            console.error('Error merging guest cart:', err);
+          }
+        }
       } else {
         // Fallback to guest session
         let sid = localStorage.getItem('guest_session_id');
