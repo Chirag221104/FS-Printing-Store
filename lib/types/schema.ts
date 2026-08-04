@@ -99,7 +99,7 @@ export interface CategoryTemplate {
 // PRODUCT IMAGE — Advanced media management
 // ============================================================
 export interface ProductImage {
-  id: string;              // unique local ID for drag/drop
+  id?: string;              // unique local ID for drag/drop
   storagePath: string;     // URL or GS path (empty if pending upload)
   file?: File;             // Pending upload file object (local only)
   previewUrl?: string;     // Local blob URL for preview (local only)
@@ -140,7 +140,7 @@ export interface Product {
   featured: boolean;
   isActive: boolean;
   trackInventory: boolean;
-  images: ProductImage[];
+  images: (ProductImage | string)[];
   productionDays?: number;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;
@@ -194,16 +194,25 @@ export interface Cart {
 }
 
 export interface CartItem {
+  id?: string;
   productId: string;
   variantId: string;
+  sku?: string;
+  name?: string;
+  price?: number;
+  image?: string;
   quantity: number;
   customization?: {
     artworkId?: string;
+    artworkStoragePath?: string;
+    artworkUrl?: string;
     placement?: string;
     customText?: string;
     textFont?: string;
     textColor?: string;
+    localFileId?: string;
   };
+  customizations?: Record<string, any>;
 }
 
 // ============================================================

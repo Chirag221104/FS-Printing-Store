@@ -166,7 +166,7 @@ export default function Step4Images({ state, setState }: Props) {
         ...prev,
         product: {
           ...prev.product!,
-          images: (prev.product?.images || []).filter(img => img.id !== imgId)
+          images: (prev.product?.images || []).filter(img => (typeof img === 'string' ? img !== imgId : img.id !== imgId))
         }
       }));
     } else if (context === 'variant' && variantId) {
@@ -187,10 +187,11 @@ export default function Step4Images({ state, setState }: Props) {
         ...prev,
         product: {
           ...prev.product!,
-          images: (prev.product?.images || []).map(img => ({
-            ...img,
-            isPrimary: img.id === imgId
-          }))
+          images: (prev.product?.images || []).map(img => 
+            typeof img === 'string'
+              ? { storagePath: img, type: 'front', isPrimary: img === imgId }
+              : { ...img, isPrimary: img.id === imgId }
+          )
         }
       }));
     } else if (context === 'variant' && variantId) {
@@ -211,7 +212,11 @@ export default function Step4Images({ state, setState }: Props) {
         ...prev,
         product: {
           ...prev.product!,
-          images: (prev.product?.images || []).map(img => img.id === imgId ? { ...img, type } : img)
+          images: (prev.product?.images || []).map(img => 
+            typeof img === 'string'
+              ? (img === imgId ? { storagePath: img, type } : img)
+              : (img.id === imgId ? { ...img, type } : img)
+          )
         }
       }));
     } else if (context === 'variant' && variantId) {
@@ -231,7 +236,13 @@ export default function Step4Images({ state, setState }: Props) {
     fileInputRef.current?.click();
   };
 
-  const renderImageGrid = (images: ProductImage[], context: 'product' | 'variant', variantId?: string) => {
+  const renderImageGrid = (rawImages: (ProductImage | string)[], context: 'product' | 'variant', variantId?: string) => {
+    const images: (ProductImage & { id: string })[] = (rawImages || []).map((img, idx) => 
+      typeof img === 'string' 
+        ? { id: img, storagePath: img, type: 'front' } 
+        : { ...img, id: img.id || img.storagePath || `img_${idx}` }
+    );
+
     if (!images || images.length === 0) return (
       <div className={styles.emptyZone} onClick={() => openUploader(context === 'product' ? { type: 'product' } : { type: 'variant', variantId: variantId! })}>
         <FiUploadCloud size={32} />

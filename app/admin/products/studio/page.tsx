@@ -337,7 +337,7 @@ function StudioContent() {
         id: productRef.id,
         price: prod.basePrice || 0,
         category: prod.categoryId || 'General',
-        image: processedProductImages?.[0]?.storagePath || '',
+        image: typeof processedProductImages?.[0] === 'string' ? processedProductImages[0] : (processedProductImages?.[0]?.storagePath || ''),
         variantCount: processedVars.length,
         updatedAt: serverTimestamp(),
         ...(prod.id ? {} : { createdAt: serverTimestamp() })

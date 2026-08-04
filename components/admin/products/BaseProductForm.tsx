@@ -144,7 +144,7 @@ export default function BaseProductForm({ product, setProduct }: Props) {
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
           {(product.images || []).map((img, i) => (
             <div key={i} style={{ position: 'relative', width: '80px', height: '80px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
-              <img src={img} alt={`Product ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={typeof img === 'string' ? img : (img.storagePath || img.previewUrl || '')} alt={`Product ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <button 
                 type="button" 
                 onClick={() => removeImage(i)}

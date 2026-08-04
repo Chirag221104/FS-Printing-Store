@@ -67,14 +67,14 @@ export const calculateOrderTotals = (
   // Apply Coupon Logic
   if (coupon && coupon.isActive) {
     // Check minimum order value
-    if (!coupon.minOrderValue || subtotal >= coupon.minOrderValue) {
+    if (!coupon.minimumOrderValue || subtotal >= coupon.minimumOrderValue) {
       
       // Calculate raw discount
       if (coupon.type === 'percentage') {
         discountAmount = subtotal * (coupon.value / 100);
         // Apply max cap if percentage
-        if (coupon.maxDiscountCap && discountAmount > coupon.maxDiscountCap) {
-          discountAmount = coupon.maxDiscountCap;
+        if (coupon.maximumDiscount && discountAmount > coupon.maximumDiscount) {
+          discountAmount = coupon.maximumDiscount;
         }
       } else if (coupon.type === 'flat') {
         discountAmount = coupon.value;
