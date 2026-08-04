@@ -250,6 +250,7 @@ export interface OrderItem {
     customText?: string;
     textFont?: string;
     textColor?: string;
+    localFileId?: string;
   };
   customizations?: Record<string, {
     type?: string;

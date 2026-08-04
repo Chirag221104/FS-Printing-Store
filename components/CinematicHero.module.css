@@ -146,6 +146,14 @@
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
+  .stickyContainer {
+    height: 100svh;
+  }
+
+  .canvas {
+    object-fit: contain;
+  }
+
   .cinematicSection {
     height: 250vh;
   }
@@ -154,7 +162,7 @@
     flex-direction: column;
     gap: 4px;
     font-size: 0.7rem;
-    bottom: 16px;
+    bottom: 24px;
   }
 
   .taglineSeparator {
