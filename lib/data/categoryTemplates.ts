@@ -377,7 +377,7 @@ export const categoryTemplates: CategoryTemplate[] = [
         bounds: { x: 2, y: 2, width: 96, height: 96, rotation: 0 },
         maxUploadSizeBytes: 52428800,
         acceptedFileTypes: ['image/png', 'image/jpeg', 'application/pdf', 'application/illustrator', 'application/postscript'],
-        dpiRecommendation: 150, lockAspectRatio: false, allowText: true, allowImages: true,
+        name: 'Default', productionMethods: ['Vinyl', 'Sublimation'], recommendedDpi: 150, lockAspectRatio: false, allowText: true, allowImages: true,
       },
     ],
     defaultWeight: 500,
