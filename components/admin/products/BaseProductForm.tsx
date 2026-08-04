@@ -3,7 +3,10 @@
 import React from 'react';
 import { Product } from '@/lib/types/schema';
 import styles from './editor.module.css';
-import { FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiImage } from 'react-icons/fi';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { toast } from 'react-hot-toast';
 
 interface Props {
   product: Partial<Product>;
@@ -11,6 +14,7 @@ interface Props {
 }
 
 export default function BaseProductForm({ product, setProduct }: Props) {
+  const [uploading, setUploading] = React.useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -40,6 +44,35 @@ export default function BaseProductForm({ product, setProduct }: Props) {
     setProduct(prev => ({ ...prev, [field]: newArr }));
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const toastId = toast.loading('Uploading image...');
+    try {
+      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      
+      setProduct(prev => ({ 
+        ...prev, 
+        images: [...(prev.images || []), url] 
+      }));
+      toast.success('Image uploaded!', { id: toastId });
+    } catch (error) {
+      console.error('Upload failed', error);
+      toast.error('Upload failed', { id: toastId });
+    }
+    setUploading(false);
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...(product.images || [])];
+    newImages.splice(index, 1);
+    setProduct(prev => ({ ...prev, images: newImages }));
+  };
+
   return (
     <div className={styles.formGrid}>
       <div className={styles.formGroup}>
@@ -67,15 +100,32 @@ export default function BaseProductForm({ product, setProduct }: Props) {
       </div>
 
       <div className={styles.formGroup}>
-        <label>Category ID *</label>
-        <select name="categoryId" value={product.categoryId || ''} onChange={handleChange} required>
-          <option value="">Select Category</option>
-          <option value="t-shirts">T-Shirts</option>
-          <option value="mugs">Mugs</option>
-          <option value="bottles">Bottles</option>
+        <label>Category *</label>
+        <select 
+          name="categoryId" 
+          value={product.categoryId || ''} 
+          onChange={handleChange}
+          required
+        >
+          <option value="">Select a category</option>
+          <option value="apparel">Apparel & T-Shirts</option>
+          <option value="accessories">Accessories (Mugs, Keychains)</option>
+          <option value="stationery">Stationery & Prints</option>
           <option value="stickers">Stickers</option>
-          {/* We will load this dynamically from DB later */}
         </select>
+      </div>
+
+      <div className={styles.formGroup}>
+        <label>Base Price (₹) *</label>
+        <input 
+          type="number" 
+          name="basePrice" 
+          value={product.basePrice || 0} 
+          onChange={(e) => setProduct(prev => ({ ...prev, basePrice: Number(e.target.value) }))} 
+          placeholder="e.g., 499"
+          required
+          min="0"
+        />
       </div>
 
       <div className={styles.formGroup}>
@@ -87,6 +137,41 @@ export default function BaseProductForm({ product, setProduct }: Props) {
           onChange={handleChange} 
           placeholder="e.g., F.S Print Works"
         />
+      </div>
+
+      <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+        <label>Product Images</label>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+          {(product.images || []).map((img, i) => (
+            <div key={i} style={{ position: 'relative', width: '80px', height: '80px', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+              <img src={img} alt={`Product ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <button 
+                type="button" 
+                onClick={() => removeImage(i)}
+                style={{ position: 'absolute', top: '4px', right: '4px', background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}
+              >
+                <FiTrash2 size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', overflow: 'hidden', display: 'inline-block' }}>
+            <button type="button" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'pointer' }} disabled={uploading}>
+              <FiImage /> {uploading ? 'Uploading...' : 'Upload Image'}
+            </button>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageUpload}
+              disabled={uploading}
+              style={{ position: 'absolute', left: 0, top: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+            />
+          </div>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+            Upload main product images (URLs will be added automatically).
+          </span>
+        </div>
       </div>
 
       <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>

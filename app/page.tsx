@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { FiArrowRight, FiStar, FiTruck, FiShield, FiHeart, FiImage } from 'react-icons/fi';
 import { FaWhatsapp, FaTshirt, FaMugHot, FaTags, FaKey, FaCoffee, FaMobileAlt, FaPalette } from 'react-icons/fa';
 import ProductCard from '@/components/ProductCard';
@@ -66,13 +67,20 @@ export default function HomePage() {
         const q = query(collection(db, 'products'), where('featured', '==', true), limit(8));
         const querySnapshot = await getDocs(q);
         
+        let fetched = [];
         if (querySnapshot.empty) {
           const fallbackQ = query(collection(db, 'products'), limit(8));
           const fallbackSnap = await getDocs(fallbackQ);
-          setFeaturedProducts(fallbackSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product)));
+          fetched = fallbackSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product));
         } else {
-          setFeaturedProducts(querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product)));
+          fetched = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product));
         }
+        
+        // Import mockProducts from the file
+        import('@/lib/data/products').then(({ products: mockData }) => {
+          const combined = [...fetched, ...mockData.filter(m => !fetched.find(f => f.id === m.id))];
+          setFeaturedProducts(combined.slice(0, 8)); // Keep max 8 on home page
+        });
       } catch (error) {
         console.error('Error fetching featured products:', error);
       }
@@ -114,10 +122,13 @@ export default function HomePage() {
           {/* Right Visual Block */}
           <div className={styles.heroVisual}>
             <div className={styles.heroImageBg} />
-            <img 
+            <Image 
               src="https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&q=80&w=800" 
               alt="Featured Custom Apparel" 
               className={styles.heroImage}
+              width={800}
+              height={800}
+              priority
             />
           </div>
         </div>
@@ -131,19 +142,19 @@ export default function HomePage() {
             <div className={styles.cardsRow}>
               {/* Card 1 */}
               <div className={`${styles.pastelCard} ${styles.bgYellow}`}>
-                <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400" alt="T-Shirt" className={styles.cardImg} />
+                <Image src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400" alt="T-Shirt" className={styles.cardImg} width={400} height={400} />
                 <div className={styles.cardPrice}>₹499</div>
                 <button className={styles.addBtn} onClick={() => handleQuickAdd({ id: 'hero-1', name: 'White T-Shirt', price: 499, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400', category: 'T-Shirts' })}>+</button>
               </div>
               {/* Card 2 */}
               <div className={`${styles.pastelCard} ${styles.bgPurple}`}>
-                <img src="https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=400" alt="Hoodie" className={styles.cardImg} />
+                <Image src="https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=400" alt="Hoodie" className={styles.cardImg} width={400} height={400} />
                 <div className={styles.cardPrice}>₹999</div>
                 <button className={styles.addBtn} onClick={() => handleQuickAdd({ id: 'hero-2', name: 'Grey Hoodie', price: 999, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=400', category: 'Hoodies' })}>+</button>
               </div>
               {/* Card 3 */}
               <div className={`${styles.pastelCard} ${styles.bgMint}`}>
-                <img src="https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=400&q=80" alt="Premium Tee" className={styles.cardImg} />
+                <Image src="https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=400&q=80" alt="Premium Tee" className={styles.cardImg} width={400} height={400} />
                 <div className={styles.cardPrice}>₹799</div>
                 <button className={styles.addBtn} onClick={() => handleQuickAdd({ id: 'hero-3', name: 'Premium Black Tee', price: 799, image: 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=400&q=80', category: 'T-Shirts' })}>+</button>
               </div>
@@ -162,8 +173,8 @@ export default function HomePage() {
                 <div className={styles.rating}>4.8<span>/5</span></div>
                 <p>Explore our TrustScore<br/>& Customer Reviews</p>
                 <div className={styles.avatars}>
-                  <img src="https://i.pravatar.cc/100?img=1" alt="User 1" />
-                  <img src="https://i.pravatar.cc/100?img=5" alt="User 2" />
+                  <Image src="https://i.pravatar.cc/100?img=1" alt="User 1" width={40} height={40} className={styles.avatarImg} />
+                  <Image src="https://i.pravatar.cc/100?img=5" alt="User 2" width={40} height={40} className={styles.avatarImg} />
                   <div className={styles.avatarCount}>2k</div>
                 </div>
               </div>

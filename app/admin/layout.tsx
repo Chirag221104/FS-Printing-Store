@@ -21,8 +21,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className={styles.sidebarNav}>
           <Link href="/admin" className={styles.navLink}><FiHome /> Dashboard</Link>
           <Link href="/admin/products" className={styles.navLink}><FiBox /> Products</Link>
+          <Link href="/admin/products/studio" className={styles.navLink}><FiBox /> Product Studio</Link>
           <Link href="/admin/orders" className={styles.navLink}><FiShoppingBag /> Orders</Link>
           <Link href="/admin/customers" className={styles.navLink}><FiUsers /> Customers</Link>
+          <Link href="/admin/coupons" className={styles.navLink}><FiSettings /> Coupons</Link>
         </nav>
         <div className={styles.sidebarFooter}>
           <Link href="/" className={styles.navLink}><FiLogOut /> Storefront</Link>

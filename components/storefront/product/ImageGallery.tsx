@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import styles from './product-storefront.module.css';
 
 interface GalleryImage {
@@ -38,11 +39,21 @@ export default function ImageGallery({ images }: Props) {
   return (
     <div className={styles.imageGallery}>
       <div className={styles.mainImageContainer}>
-        {/* Placeholder render logic for now */}
-        <div className={styles.mainImagePlaceholder}>
-          <span style={{ fontSize: '0.8rem', color: '#888', position: 'absolute', top: 10, left: 10 }}>{activeImage.type.toUpperCase()}</span>
-          <span>Image Path: {activeImage.storagePath}</span>
-        </div>
+        {activeImage.storagePath.startsWith('/') || activeImage.storagePath.startsWith('http') ? (
+          <Image 
+            src={activeImage.storagePath} 
+            alt={`Product ${activeImage.type}`}
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            style={{ objectFit: 'cover' }}
+            priority
+          />
+        ) : (
+          <div className={styles.mainImagePlaceholder}>
+            <span style={{ fontSize: '0.8rem', color: '#888', position: 'absolute', top: 10, left: 10 }}>{activeImage.type.toUpperCase()}</span>
+            <span>Image Path: {activeImage.storagePath}</span>
+          </div>
+        )}
       </div>
       
       {images.length > 1 && (
@@ -53,9 +64,19 @@ export default function ImageGallery({ images }: Props) {
               className={`${styles.thumbnail} ${idx === activeIndex ? styles.activeThumbnail : ''}`}
               onClick={() => setActiveIndex(idx)}
             >
-              <div className={styles.thumbPlaceholder}>
-                <span style={{ fontSize: '0.6rem' }}>{img.type}</span>
-              </div>
+              {img.storagePath.startsWith('/') || img.storagePath.startsWith('http') ? (
+                <Image 
+                  src={img.storagePath} 
+                  alt={`Thumbnail ${img.type}`}
+                  fill
+                  sizes="100px"
+                  style={{ objectFit: 'cover' }}
+                />
+              ) : (
+                <div className={styles.thumbPlaceholder}>
+                  <span style={{ fontSize: '0.6rem' }}>{img.type}</span>
+                </div>
+              )}
             </div>
           ))}
         </div>

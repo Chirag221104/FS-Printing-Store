@@ -40,7 +40,8 @@ export const calculateLineItemPrice = (
     quantity: cartItem.quantity,
     unitPrice: unitPrice,
     totalPrice: unitPrice * cartItem.quantity,
-    customization: cartItem.customization
+    customization: cartItem.customization,
+    customizations: cartItem.customizations
   };
 };
 

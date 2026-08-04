@@ -351,14 +351,61 @@ export default function AdminOrders() {
                 <tbody>
                   {viewingOrder.items?.map((item, i) => (
                     <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {item.image && <img src={item.image} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }} />}
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{item.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.sku}</div>
-                          {item.customization?.artworkUrl && (
-                            <a href={item.customization.artworkUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: '#2563eb', textDecoration: 'underline' }}>View Artwork</a>
-                          )}
+                      <td style={{ padding: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                          {item.image && <img src={item.image} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }} />}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 500 }}>{item.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.sku}</div>
+                            
+                            {/* Legacy single customization */}
+                            {item.customization?.artworkUrl && (
+                              <a href={item.customization.artworkUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: '#2563eb', textDecoration: 'underline' }}>View Artwork</a>
+                            )}
+                            {item.customization?.customText && !item.customizations && (
+                              <div style={{ marginTop: '4px', padding: '6px 8px', background: '#eff6ff', borderRadius: '4px', fontSize: '0.8rem' }}>
+                                <strong>Text:</strong> "{item.customization.customText}"
+                                {item.customization.textFont && <span> • Font: {item.customization.textFont}</span>}
+                                {item.customization.textColor && <span> • Color: <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: item.customization.textColor, verticalAlign: 'middle', marginLeft: 2 }} /></span>}
+                                {item.customization.placement && <span> • Placement: {item.customization.placement}</span>}
+                              </div>
+                            )}
+
+                            {/* Multi-location customizations */}
+                            {item.customizations && Object.keys(item.customizations).length > 0 && (
+                              <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {Object.entries(item.customizations).map(([locId, cust]) => (
+                                  <div key={locId} style={{ padding: '6px 8px', background: '#f0fdf4', borderRadius: '4px', fontSize: '0.8rem', borderLeft: '3px solid #22c55e' }}>
+                                    <div style={{ fontWeight: 600, textTransform: 'capitalize', marginBottom: '2px', color: '#166534' }}>
+                                      📍 {locId.replace(/_/g, ' ')} — {cust.type === 'text' ? '✏️ Text' : cust.type === 'artwork' ? '🖼️ Artwork' : cust.type || 'Custom'}
+                                    </div>
+                                    {cust.customText && (
+                                      <div>
+                                        <strong>Text:</strong> "{cust.customText}"
+                                        {cust.textFont && <span> • Font: {cust.textFont}</span>}
+                                        {cust.textColor && (
+                                          <span> • Color: <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: cust.textColor, verticalAlign: 'middle', marginLeft: 2, border: '1px solid #ccc' }} /></span>
+                                        )}
+                                        {cust.isBold && <span> • <strong>Bold</strong></span>}
+                                        {cust.isItalic && <span> • <em>Italic</em></span>}
+                                      </div>
+                                    )}
+                                    {cust.placement && <div><strong>Placement:</strong> {cust.placement}</div>}
+                                    {cust.artworkUrl && (
+                                      <div>
+                                        <a href={cust.artworkUrl} target="_blank" rel="noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                                          📥 Download Artwork
+                                        </a>
+                                      </div>
+                                    )}
+                                    {cust.artworkStoragePath && !cust.artworkUrl && (
+                                      <div style={{ color: '#64748b' }}>Artwork: {cust.artworkStoragePath}</div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td style={{ padding: '12px' }}>₹{item.unitPrice?.toLocaleString()}</td>

@@ -23,9 +23,53 @@ export default function AdminAuthProvider({ children }: { children: React.ReactN
   const [password, setPassword] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        // Check if it's the master admin email
+        if (currentUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+          setUser(currentUser);
+          setLoading(false);
+          
+          // Auto-sync their role in Firestore
+          try {
+            const { doc, setDoc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
+            const userRef = doc(db, 'users', currentUser.uid);
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists() || userSnap.data()?.role !== 'admin') {
+              await setDoc(userRef, {
+                email: currentUser.email,
+                role: 'admin',
+                createdAt: new Date()
+              }, { merge: true });
+            }
+          } catch (e) {
+            console.error('Failed to sync master admin role', e);
+          }
+        } else {
+          // Standard admin check via Firestore
+          try {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
+            const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
+            if (userSnap.exists() && userSnap.data()?.role === 'admin') {
+              setUser(currentUser);
+            } else {
+              toast.error('Access Denied. You are not an admin.');
+              await signOut(auth);
+              setUser(null);
+            }
+          } catch (e) {
+            console.error('Admin verification failed', e);
+            await signOut(auth);
+            setUser(null);
+          }
+          setLoading(false);
+        }
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
     });
     return () => unsubscribe();
   }, []);

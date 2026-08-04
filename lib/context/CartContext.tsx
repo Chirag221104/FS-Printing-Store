@@ -16,7 +16,8 @@ export interface CartItem {
   image: string;
   category?: string;
   quantity: number;
-  customization?: any;
+  customization?: any; // legacy
+  customizations?: Record<string, any>;
 }
 
 interface CartContextType {
@@ -46,7 +47,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const guestSid = localStorage.getItem('guest_session_id');
+        const rawGuestSid = localStorage.getItem('guest_session_id');
+        let guestSid = rawGuestSid;
+        if (guestSid && !guestSid.startsWith('guest_')) {
+          guestSid = 'guest_' + guestSid;
+          localStorage.setItem('guest_session_id', guestSid);
+        }
         setSessionId(user.uid);
 
         // Merge guest cart into user cart if guest session exists
@@ -89,6 +95,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (!sid) {
           sid = 'guest_' + Math.random().toString(36).substring(2, 15);
           localStorage.setItem('guest_session_id', sid);
+        } else if (!sid.startsWith('guest_')) {
+          sid = 'guest_' + sid;
+          localStorage.setItem('guest_session_id', sid);
         }
         setSessionId(sid);
       }
@@ -123,11 +132,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const syncToCloud = async (newItems: CartItem[]) => {
     if (!sessionId) return;
     try {
-      // JSON serialization strips out any 'undefined' properties which Firestore rejects
-      const sanitizedItems = JSON.parse(JSON.stringify(newItems));
-      const cartRef = doc(db, 'carts', sessionId);
-      await setDoc(cartRef, {
-        items: sanitizedItems,
+      // Deep clone and remove any undefined values which Firestore rejects
+      const safeData = JSON.parse(JSON.stringify(newItems));
+      
+      await setDoc(doc(db, 'carts', sessionId), {
+        items: safeData,
         updatedAt: new Date().toISOString()
       }, { merge: true });
     } catch (err) {
@@ -148,11 +157,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       category: item.category || 'General',
       quantity: item.quantity || 1,
       ...(item.customization ? { customization: item.customization } : {}),
+      ...(item.customizations ? { customizations: item.customizations } : {}),
     };
 
     setItems(prev => {
       // Create a unique hash for the cart item so identical items stack, but different customizations stay separate
-      const customizationHash = safeItem.customization ? JSON.stringify(safeItem.customization) : '';
+      let hashSource = '';
+      if (safeItem.customizations) {
+        hashSource = JSON.stringify(safeItem.customizations);
+      } else if (safeItem.customization) {
+        hashSource = JSON.stringify(safeItem.customization);
+      }
+      
+      const customizationHash = hashSource;
       const cartItemId = `${safeItem.variantId}_${customizationHash}`;
       
       const existing = prev.find(i => i.id === cartItemId);
@@ -166,7 +183,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       syncToCloud(newItems);
       return newItems;
     });
-    setIsCartOpen(true);
+    // Removed setIsCartOpen(true) per user request
   }, [sessionId]);
 
   const removeFromCart = useCallback(async (id: string) => {

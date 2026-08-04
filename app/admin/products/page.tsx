@@ -164,12 +164,20 @@ export default function AdminProducts() {
           <h1>Products</h1>
           <p>Manage your store's catalog</p>
         </div>
-        <Link 
-          href="/admin/products/new"
-          style={{ display: 'inline-block', padding: '10px 20px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, textDecoration: 'none' }}
-        >
-          + Add Product
-        </Link>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Link 
+            href="/admin/products/studio?new=true"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg, #FF7A00, #FF9B3F)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 14px rgba(255, 122, 0, 0.25)' }}
+          >
+            <FiPlus /> Launch Product Studio
+          </Link>
+          <Link 
+            href="/admin/products/new"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, textDecoration: 'none' }}
+          >
+            Quick Add
+          </Link>
+        </div>
       </div>
 
       <div className={styles.tableContainer}>
@@ -179,6 +187,7 @@ export default function AdminProducts() {
               <th>Image</th>
               <th>Name</th>
               <th>Category</th>
+              <th>Variants (SKUs)</th>
               <th>Price</th>
               <th>Stock</th>
               <th>Actions</th>
@@ -198,16 +207,29 @@ export default function AdminProducts() {
                 </td>
               </tr>
             ) : (
-              productList.map((product) => (
+              productList.map((product: any) => (
                 <tr key={product.id}>
                   <td>
-                    <img src={product.image || 'https://via.placeholder.com/40'} alt={product.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img 
+                      src={(Array.isArray(product.images) && product.images.length > 0 ? product.images[0]?.storagePath : (product.image || 'https://via.placeholder.com/40'))} 
+                      alt={product.name || 'Product Image'} 
+                      style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
+                    />
                   </td>
-                  <td style={{ fontWeight: 500 }}>{product.name}</td>
-                  <td>{product.category}</td>
-                  <td>₹{product.price}</td>
+                  <td style={{ fontWeight: 500 }}>{product.name || 'Untitled Product'}</td>
+                  <td>{product.categoryId || product.category || 'General'}</td>
                   <td>
-                    {product.inStock ? (
+                    {product.variantCount ? (
+                      <span className={styles.badge} style={{ background: '#e0f2fe', color: '#0369a1' }}>
+                        {product.variantCount} SKUs
+                      </span>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Simple Product</span>
+                    )}
+                  </td>
+                  <td>₹{product.basePrice ?? product.price ?? 0}</td>
+                  <td>
+                    {(product.isActive ?? product.inStock ?? true) ? (
                       <span className={`${styles.badge} ${styles.active}`}>In Stock</span>
                     ) : (
                       <span className={styles.badge}>Out of Stock</span>
@@ -215,7 +237,7 @@ export default function AdminProducts() {
                   </td>
                   <td>
                     <div className={styles.cardActions}>
-                      <Link href={`/admin/products/new?id=${product.id}`} className={styles.actionBtn}>
+                      <Link href={`/admin/products/studio?id=${product.id}`} className={styles.actionBtn}>
                         <FiEdit2 /> Edit
                       </Link>
                       <button 

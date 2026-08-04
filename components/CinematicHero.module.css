@@ -1,8 +1,8 @@
 .cinematicSection {
   position: relative;
   width: 100%;
-  /* Tall section — user scrolls through this to drive the animation */
-  height: 500vh;
+  /* Tall section — user scrolls through this to drive the animation. Increased height makes it scroll slower. */
+  height: 1000vh;
 }
 
 /* ---- Sticky Container ---- */

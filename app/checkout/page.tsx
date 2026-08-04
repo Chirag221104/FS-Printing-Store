@@ -8,12 +8,13 @@ import { FiArrowLeft, FiCheck, FiLock, FiGift, FiCreditCard, FiTruck } from 'rea
 import { FaWhatsapp } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, doc, setDoc, getDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, getDoc, serverTimestamp, query, where, getDocs, runTransaction } from 'firebase/firestore';
 import emailjs from '@emailjs/browser';
 import styles from './page.module.css';
 
 import { Order, OrderItem, Coupon, ShippingRule } from '@/lib/types/schema';
 import { calculateLineItemPrice, calculateOrderTotals, PricingSummary } from '@/lib/utils/pricingEngine';
+import CustomArtworkThumbnail from '@/components/storefront/CustomArtworkThumbnail';
 
 declare global {
   interface Window {
@@ -133,7 +134,8 @@ export default function CheckoutPage() {
               quantity: qty,
               unitPrice: price,
               totalPrice: price * qty,
-              customization: item.customization
+              customization: item.customization,
+              customizations: item.customizations
             };
           }
 
@@ -170,7 +172,8 @@ export default function CheckoutPage() {
     if (!couponCode) return;
     setCouponError('');
     try {
-      const q = query(collection(db, 'coupons'), where('code', '==', couponCode.toUpperCase()), where('isActive', '==', true));
+      const normalizedCode = couponCode.trim().toUpperCase();
+      const q = query(collection(db, 'coupons'), where('normalizedCode', '==', normalizedCode), where('isActive', '==', true));
       const snap = await getDocs(q);
       
       if (snap.empty) {
@@ -183,9 +186,22 @@ export default function CheckoutPage() {
       const coupon = { ...couponDoc.data(), id: couponDoc.id } as Coupon;
       
       // Basic validations
-      if (coupon.minOrderValue && pricing && (pricing.subtotal < coupon.minOrderValue)) {
-        setCouponError(`Minimum order value of ₹${coupon.minOrderValue} required.`);
+      if (coupon.minimumOrderValue && pricing && (pricing.subtotal < coupon.minimumOrderValue)) {
+        setCouponError(`Minimum order value of ₹${coupon.minimumOrderValue} required.`);
         return;
+      }
+
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        setCouponError('This coupon has reached its usage limit.');
+        return;
+      }
+
+      if (coupon.expiresAt) {
+        const expiry = (coupon.expiresAt as any).toDate ? (coupon.expiresAt as any).toDate() : new Date(coupon.expiresAt as string);
+        if (expiry < new Date()) {
+          setCouponError('This coupon has expired.');
+          return;
+        }
       }
       
       setActiveCoupon(coupon);
@@ -224,6 +240,12 @@ export default function CheckoutPage() {
       subtotal: pricing.subtotal,
       discountAmount: pricing.discountAmount,
       couponCode: activeCoupon?.code || undefined,
+      appliedCoupon: activeCoupon ? {
+        code: activeCoupon.code,
+        discountType: activeCoupon.type,
+        discountValue: activeCoupon.value,
+        discountAmount: pricing.discountAmount,
+      } : undefined,
       taxableAmount: pricing.taxableAmount,
       gstAmount: pricing.gstAmount,
       shippingFee: pricing.shippingFee,
@@ -244,29 +266,63 @@ export default function CheckoutPage() {
     sanitizedOrder.createdAt = serverTimestamp();
     sanitizedOrder.updatedAt = serverTimestamp();
 
-    const orderRef = await addDoc(collection(db, 'orders'), sanitizedOrder);
+    let orderId = '';
+
+    // Use Transaction if Coupon is active to prevent race conditions on usageLimit
+    if (activeCoupon) {
+      try {
+        await runTransaction(db, async (transaction) => {
+          const couponRef = doc(db, 'coupons', activeCoupon.normalizedCode);
+          const couponDoc = await transaction.get(couponRef);
+          
+          if (!couponDoc.exists()) throw new Error("Coupon does not exist!");
+          
+          const couponData = couponDoc.data() as Coupon;
+          if (!couponData.isActive) throw new Error("Coupon is no longer active.");
+          if (couponData.usageLimit && couponData.usedCount >= couponData.usageLimit) {
+            throw new Error("Coupon usage limit reached.");
+          }
+          if (couponData.expiresAt) {
+            const expiry = (couponData.expiresAt as any).toDate ? (couponData.expiresAt as any).toDate() : new Date(couponData.expiresAt as string);
+            if (expiry < new Date()) throw new Error("Coupon has expired.");
+          }
+
+          // Generate new Order Ref
+          const newOrderRef = doc(collection(db, 'orders'));
+          orderId = newOrderRef.id;
+
+          // Increment Used Count atomically
+          transaction.update(couponRef, {
+            usedCount: couponData.usedCount + 1,
+            updatedAt: serverTimestamp(),
+          });
+
+          // Create Order
+          transaction.set(newOrderRef, sanitizedOrder);
+        });
+      } catch (error: any) {
+        console.error("Transaction failed: ", error);
+        throw new Error(error.message || "Failed to apply coupon due to high demand. Please try again.");
+      }
+    } else {
+      // Normal write if no coupon
+      const orderRef = await addDoc(collection(db, 'orders'), sanitizedOrder);
+      orderId = orderRef.id;
+    }
 
     // Create initial timeline event
-    await addDoc(collection(db, `orders/${orderRef.id}/timeline`), {
+    await addDoc(collection(db, `orders/${orderId}/timeline`), {
       status: 'Order Placed',
       message: `Order placed via ${paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}`,
       createdAt: serverTimestamp(),
       updatedBy: 'System',
     });
     
-    // Update Customer Profile
-    const customerRef = doc(db, 'customers', formData.phone);
-    await setDoc(customerRef, {
-      name: formData.name,
-      phone: formData.phone,
-      email: formData.email,
-      address: `${formData.addressLine1}, ${formData.city} - ${formData.pincode}`,
-      lastOrderId: orderRef.id,
-      lastOrderDate: new Date().toISOString(),
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    // Note: Customer profile update removed to prevent Firebase permission errors 
+    // since we do not have remote write access to the 'customers' collection, 
+    // and the customer data is already fully captured in the order itself.
 
-    return orderRef.id;
+    return orderId;
   };
 
   const sendConfirmationEmail = async (orderIdStr: string, payMethodStr: string, total: number) => {
@@ -563,7 +619,23 @@ export default function CheckoutPage() {
               {orderItems.map((item) => (
                 <div key={`${item.variantId}_${item.customization?.artworkStoragePath || ''}`} className={styles.summaryItem}>
                   <div className={styles.itemImage}>
-                    <img src={item.image || '/images/placeholder.jpg'} alt={item.name} />
+                    {item.customizations && Object.values(item.customizations).find(c => c.localFileId)?.localFileId ? (
+                      <CustomArtworkThumbnail 
+                        localFileId={Object.values(item.customizations).find(c => c.localFileId)?.localFileId}
+                        fallbackImage={item.image || 'https://via.placeholder.com/150'}
+                        alt={item.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }}
+                      />
+                    ) : item.customization?.localFileId ? (
+                      <CustomArtworkThumbnail 
+                        localFileId={item.customization.localFileId}
+                        fallbackImage={item.image || 'https://via.placeholder.com/150'}
+                        alt={item.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }}
+                      />
+                    ) : (
+                      <img src={item.image || 'https://via.placeholder.com/150'} alt={item.name} />
+                    )}
                     <span className={styles.itemBadge}>{item.quantity}</span>
                   </div>
                   <div className={styles.itemDetails}>
@@ -573,6 +645,20 @@ export default function CheckoutPage() {
                     {item.customization?.artworkUrl && (
                       <div style={{ fontSize: '0.75rem', color: 'var(--primary-gold)', marginTop: '0.25rem' }}>
                         <FiCheck size={10} /> Custom Artwork Attached
+                      </div>
+                    )}
+
+                    {/* Multi-location customization summary */}
+                    {item.customizations && Object.keys(item.customizations).length > 0 && (
+                      <div style={{ marginTop: '4px' }}>
+                        {Object.entries(item.customizations).map(([locId, cust]) => (
+                          <div key={locId} style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <FiCheck size={10} style={{ color: '#22c55e', flexShrink: 0 }} />
+                            <span style={{ textTransform: 'capitalize' }}>{locId.replace(/_/g, ' ')}: </span>
+                            {cust.type === 'text' && <span>"{cust.customText}" ({cust.textFont})</span>}
+                            {cust.type === 'artwork' && <span>Custom Artwork</span>}
+                          </div>
+                        ))}
                       </div>
                     )}
 

@@ -18,5 +18,7 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
+// Reduce max retry time to prevent infinite hangs and reveal real errors
+storage.maxUploadRetryTime = 3000;
 
 export { app, db, auth, storage };

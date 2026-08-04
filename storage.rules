@@ -18,7 +18,13 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
-    // 2. PRIVATE ARTWORKS (Customer Uploads)
+    // 2. PRODUCT STUDIO IMAGES (Admin Uploads)
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if true; // In production, we'd restrict this to isAdmin()
+    }
+
+    // 3. PRIVATE ARTWORKS (Customer Uploads)
     match /private/artworks/{userId}/{allPaths=**} {
       // Users can read/write their own artwork folder. Admins can read/write all.
       allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();

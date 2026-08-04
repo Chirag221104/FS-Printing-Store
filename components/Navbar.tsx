@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCart } from '@/lib/context/CartContext';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -82,7 +83,14 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/" className={styles.logo}>
-            <img src={logoImg.src} alt="F.S Print Works" className={styles.logoImage} />
+            <Image 
+              src={logoImg} 
+              alt="F.S Print Works" 
+              className={styles.logoImage} 
+              priority 
+              unoptimized 
+              style={{ maxHeight: '60px', width: 'auto', objectFit: 'contain' }}
+            />
           </Link>
 
           {/* Desktop Nav */}
@@ -123,7 +131,7 @@ export default function Navbar() {
                   aria-label="User menu"
                 >
                   {profile?.photoURL ? (
-                    <img src={profile.photoURL} alt="" className={styles.userAvatar} referrerPolicy="no-referrer" />
+                    <Image src={profile.photoURL} alt="User Avatar" width={40} height={40} className={styles.userAvatar} referrerPolicy="no-referrer" />
                   ) : (
                     <span className={styles.userInitial}>{userInitial}</span>
                   )}
@@ -174,7 +182,7 @@ export default function Navbar() {
             <div className={styles.mobileUserInfo}>
               <div className={styles.mobileUserAvatar}>
                 {profile.photoURL ? (
-                  <img src={profile.photoURL} alt="" referrerPolicy="no-referrer" />
+                  <Image src={profile.photoURL} alt="User Avatar" width={48} height={48} referrerPolicy="no-referrer" style={{ borderRadius: '50%' }} />
                 ) : (
                   <span>{userInitial}</span>
                 )}

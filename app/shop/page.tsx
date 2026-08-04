@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
-import { Product, categories } from '@/lib/data/products';
+import { Product, categories, products as mockProducts } from '@/lib/data/products';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { FiSearch, FiFilter, FiX } from 'react-icons/fi';
@@ -73,10 +73,11 @@ function ShopContent() {
           where('isActive', '==', true)
         );
         const querySnapshot = await getDocs(q);
-        const fetchedProducts = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product));
+        let fetchedProducts = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product));
         
-        // As a fallback for older data that might not have createdAt, we ensure it exists
-        setProducts(fetchedProducts);
+        // Combine database products with mock data so the demo always looks full
+        const combinedProducts = [...fetchedProducts, ...mockProducts.filter(m => !fetchedProducts.find(f => f.id === m.id))];
+        setProducts(combinedProducts);
       } catch (error) {
         console.error('Error fetching products:', error);
       }

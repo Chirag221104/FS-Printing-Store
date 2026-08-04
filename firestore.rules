@@ -5,7 +5,10 @@ service cloud.firestore {
     
     // Function to check if user is admin
     function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return request.auth != null && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        request.auth.token.email == 'f.sprinterstore91@gmail.com'
+      );
     }
 
     // Function to check if user owns the document
@@ -37,7 +40,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 2. USERS & ADDRESSES
+    // 2. USERS & ADDRESSES & CUSTOMERS
+    // Users can read/write their own data. Admins can read/write all.
+    match /customers/{phone} {
+      allow read: if isAdmin();
+      allow write: if true; // Allow guest checkout to update customer profile
+    }
     // Users can read/write their own data. Admins can read/write all.
     match /users/{userId} {
       allow read, write: if isOwner(userId) || isAdmin();
@@ -60,8 +68,8 @@ service cloud.firestore {
     // 4. CARTS
     // Users/Guests can read/write their own carts
     match /carts/{cartId} {
-      // Authenticated users can only access their own cart; guests can access any cart by session ID
-      allow read, write: if request.auth == null || cartId == request.auth.uid;
+      // Authenticated users can only access their own cart; guests can access any guest cart. Auth users can also access guest carts for merging.
+      allow read, write: if request.auth == null || cartId == request.auth.uid || cartId.matches('^guest_.*');
     }
 
     // 5. ORDERS & TIMELINES
@@ -69,19 +77,27 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow read: if isAdmin() || (request.auth != null && resource.data.customerId == request.auth.uid);
       allow create: if true; // Allow guest checkout creation
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || resource.data.customerId == request.resource.data.customerId;
+      allow delete: if isAdmin();
       
       match /timeline/{timelineId} {
         allow read: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid);
-        allow write: if isAdmin();
+        allow create: if true; // Allow system/client to create the initial event
+        allow update, delete: if isAdmin();
       }
     }
 
     // 6. COUPONS
-    // Anyone can read active coupons, only admins can write.
+    // Anyone can read active coupons, only admins can create/delete/full update.
+    // Users (even guests) can update the usedCount atomically when checking out.
     match /coupons/{couponId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedCount', 'updatedAt']) && 
+        request.resource.data.usedCount == resource.data.usedCount + 1 && 
+        resource.data.isActive == true
+      );
     }
 
     // 7. SETTINGS

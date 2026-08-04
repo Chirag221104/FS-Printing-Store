@@ -1,13 +1,13 @@
-'use client';
+  'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import styles from './CinematicHero.module.css';
 
-const TOTAL_FRAMES = 240;
+const TOTAL_FRAMES = 300;
 
 const getFramePath = (index: number) => {
-  const num = String(index).padStart(3, '0');
-  return `/products/ezgif-frame-${num}.jpg`;
+  const num = String(index + 1).padStart(3, '0'); // Frames start from 001
+  return `/part1/ezgif-frame-${num}.png`;
 };
 
 export default function CinematicHero() {
@@ -59,8 +59,8 @@ export default function CinematicHero() {
       const sectionHeight = section.offsetHeight;
       const viewportHeight = window.innerHeight;
 
-      // -rect.top = how many pixels we've scrolled past the top of the section
-      const scrolled = -rect.top;
+      // Use window.scrollY to start the animation instantly when scrolling from the top of the page
+      const scrolled = window.scrollY;
       const scrollableDistance = sectionHeight - viewportHeight;
 
       const progress = Math.min(Math.max(scrolled / scrollableDistance, 0), 1);
@@ -71,7 +71,7 @@ export default function CinematicHero() {
     const lerp = () => {
       const target = targetFrameRef.current;
       const current = currentFrameRef.current;
-      const ease = 0.25;
+      const ease = 0.08; // Lower value = smoother, lazier lag behind scroll
       const next = current + (target - current) * ease;
 
       const rounded = Math.round(next);

@@ -42,9 +42,29 @@ export default function NewProductPage() {
     featured: false,
     isActive: true,
     trackInventory: true,
+    images: [],
   });
 
   const [variants, setVariants] = useState<Partial<Variant>[]>([]);
+
+  // Auto-save draft logic
+  React.useEffect(() => {
+    const draft = localStorage.getItem('new_product_draft');
+    if (draft) {
+      try {
+        const parsed = JSON.parse(draft);
+        if (parsed.product && Object.keys(parsed.product).length > 0) setProduct(parsed.product);
+        if (parsed.variants && parsed.variants.length > 0) setVariants(parsed.variants);
+      } catch (e) {}
+    }
+  }, []);
+
+  React.useEffect(() => {
+    // Only save if there's actual data
+    if (product.name || variants.length > 0) {
+      localStorage.setItem('new_product_draft', JSON.stringify({ product, variants }));
+    }
+  }, [product, variants]);
 
   const handleSave = async () => {
     if (!product.name || !product.slug || !product.categoryId) {
@@ -82,6 +102,7 @@ export default function NewProductPage() {
       });
 
       await batch.commit();
+      localStorage.removeItem('new_product_draft');
       toast.success('Product created successfully!');
       router.push('/admin/products');
       

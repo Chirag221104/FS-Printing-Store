@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCart } from '@/lib/context/CartContext';
 import { FiShoppingBag, FiEye, FiImage, FiStar } from 'react-icons/fi';
 import { FaTshirt, FaMugHot, FaTags, FaKey, FaCoffee, FaMobileAlt, FaFire } from 'react-icons/fa';
@@ -35,7 +36,14 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
       {/* Image */}
       <div className={styles.imageWrapper}>
         {product.image && product.image.trim() !== '' ? (
-          <img src={product.image} alt={product.name} className={styles.productImage} />
+          <Image 
+            src={product.image} 
+            alt={product.name} 
+            className={styles.productImage} 
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            style={{ objectFit: 'cover' }}
+          />
         ) : (
           <div className={styles.imagePlaceholder}>
             <span className={styles.placeholderIcon}>
