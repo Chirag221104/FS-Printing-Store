@@ -147,15 +147,18 @@
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
   .stickyContainer {
-    height: 100svh;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    top: calc(50svh - 28vw);
+    background: transparent;
   }
 
   .canvas {
-    object-fit: contain;
+    object-fit: cover;
   }
 
   .cinematicSection {
-    height: 250vh;
+    height: 150vh;
   }
 
   .tagline {
