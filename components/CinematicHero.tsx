@@ -7,7 +7,7 @@ const TOTAL_FRAMES = 300;
 
 const getFramePath = (index: number) => {
   const num = String(index + 1).padStart(3, '0'); // Frames start from 001
-  return `/part1/ezgif-frame-${num}.png`;
+  return `/part1-webp/ezgif-frame-${num}.webp`;
 };
 
 export default function CinematicHero() {
@@ -93,42 +93,50 @@ export default function CinematicHero() {
     };
   }, [drawFrame]);
 
-  // Preload all frames — show canvas as soon as first frame loads
+  // Batched preload: load first 10 frames immediately, then the rest in background
   useEffect(() => {
     const images: HTMLImageElement[] = new Array(TOTAL_FRAMES);
     let loadedCount = 0;
     let firstLoaded = false;
 
-    for (let i = 0; i < TOTAL_FRAMES; i++) {
+    imagesRef.current = images;
+
+    const loadFrame = (i: number) => {
       const img = new Image();
-      img.src = getFramePath(i + 1); // frames are 1-indexed
+      img.src = getFramePath(i + 1);
       img.onload = () => {
         loadedCount++;
         setLoadProgress(Math.floor((loadedCount / TOTAL_FRAMES) * 100));
-
-        // As soon as the FIRST frame is ready, show canvas and start animation
         if (!firstLoaded && i === 0) {
           firstLoaded = true;
           setFirstFrameReady(true);
         }
-
         if (loadedCount === TOTAL_FRAMES) {
           setFullyLoaded(true);
         }
       };
       img.onerror = () => {
         loadedCount++;
-        setLoadProgress(Math.floor((loadedCount / TOTAL_FRAMES) * 100));
-        if (loadedCount === TOTAL_FRAMES) {
-          setFullyLoaded(true);
-        }
+        if (loadedCount === TOTAL_FRAMES) setFullyLoaded(true);
       };
       images[i] = img;
+    };
+
+    // Priority: load first 15 frames immediately so animation starts fast
+    const PRIORITY_FRAMES = 15;
+    for (let i = 0; i < PRIORITY_FRAMES; i++) {
+      loadFrame(i);
     }
 
-    imagesRef.current = images; // assign immediately so drawFrame can access them
+    // Load remaining frames after a short delay so page content loads first
+    const timer = setTimeout(() => {
+      for (let i = PRIORITY_FRAMES; i < TOTAL_FRAMES; i++) {
+        loadFrame(i);
+      }
+    }, 1500); // 1.5s delay gives browser time to load critical page assets first
 
     return () => {
+      clearTimeout(timer);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
