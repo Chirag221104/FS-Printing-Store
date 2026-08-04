@@ -6,7 +6,7 @@ export type FirestoreTimestamp = Timestamp | FieldValue | Date | string | null;
 // PRINT PRODUCTION STUDIO (Milestone 3)
 // ============================================================
 
-export type ProductionMethod = 'DTF' | 'Screen Printing' | 'Embroidery' | 'Sublimation' | 'UV Printing' | 'Laser Engraving' | 'Vinyl';
+export type ProductionMethod = 'DTF' | 'DTG' | 'Screen Printing' | 'Embroidery' | 'Sublimation' | 'UV Printing' | 'Laser Engraving' | 'Vinyl';
 
 export interface PrintBounds {
   x: number; // percentage (0-100)
